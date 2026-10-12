@@ -58,9 +58,6 @@ button{font:inherit;cursor:pointer}
 .badge.bad{background:var(--red);color:#fff}
 .done .t{text-decoration:line-through;color:var(--mut)}
 .empty{text-align:center;color:var(--mut);padding:28px 8px}
-.stock{min-width:118px}
-.stock.out{background:var(--red);color:#fff}
-.stock.in{background:var(--ok);color:#fff}
 #toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1b2421;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;max-width:90%}
 #toast.show{opacity:1}
 a{color:var(--g);font-weight:700}
@@ -86,7 +83,7 @@ a{color:var(--g);font-weight:700}
 <div id="toast" role="status"></div>
 
 <script>
-/* ====== ΡΥΘΜΙΣΕΙΣ ====== */
+/* ====== ΡΥΘΜΙΣΕΙΣ FIREBASE ====== */
 const FIREBASE_DB_URL  = 'https://peri-a7907-default-rtdb.europe-west1.firebasedatabase.app';   
 const FIREBASE_API_KEY = 'AIzaSyDVOH07_oS1fpNW78nAu9c5XLxdTZC50wA';   
 const ADMIN_NAME = 'peri';     
@@ -102,7 +99,7 @@ function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStor
 let S = load();
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Δεν έγινε αποθήκευση!'); } sync(); }
 
-let tab = 'prod', openDebtor = null, editId = null, q = '', cigFilter = 'all';
+let tab = 'prod', openDebtor = null, editId = null, q = '';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -110,7 +107,6 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const num = v => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? null : n; };
 const eur = n => n == null ? '' : n.toLocaleString('el-GR', {style:'currency', currency:'EUR'});
 const dt = t => new Date(t).toLocaleString('el-GR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
-const dd = s => new Date(s + 'T00:00:00').toLocaleDateString('el-GR');
 const who = () => AUTH ? (session ? session.name : '') : S.user.trim();
 const isAdmin = () => !AUTH || (!!session && session.role === 'admin');
 const canDel = x => isAdmin() || (!!x && !!x.by && x.by === who());
@@ -282,7 +278,7 @@ function telList(l){
     ${editBtn('telEdit', c)}${delBtn('telDel', c)}</div>`).join('');
 }
 
-/* ---------- Αντίγραφο ---------- */
+/* ---------- Αντίγραφο / Ρυθμίσεις ---------- */
 function vBackup(){
   return accountCard() + (!isAdmin() ? '' : `<div class="card"><h2>Αντίγραφο ασφαλείας</h2>
     <p class="muted">Τα δεδομένα μένουν σε αυτή τη συσκευή/πρόγραμμα περιήγησης. Κατέβασε αντίγραφο κάθε τόσο.</p>
@@ -431,7 +427,7 @@ function renderHeader(){
 }
 function loginView(){
   return `<form data-form="login" class="card grid" style="margin-top:24px"><h2 class="full" style="margin:0">Είσοδος</h2>
-    <input class="full" name="user" placeholder="Όνομα χρήστη (π.χ. peri)" autocomplete="username" autocapitalize="none" required>
+    <input class="full" name="user" placeholder="Όνομα χρήστη" autocomplete="username" autocapitalize="none" required>
     <input class="full" name="pass" type="password" placeholder="Κωδικός" autocomplete="current-password" required>
     <button class="primary">Είσοδος</button></form>`;
 }
@@ -473,10 +469,7 @@ async function doLogin(f){
   if(!name || !pw) return;
   toast('Σύνδεση…');
   try{
-    const userEmail = (name === 'peri' || name === 'peri@gmail.com') ? 'peri@gmail.com' : emailFor(name);
-    const userPass = (name === 'peri' || name === 'peri@gmail.com') ? pw : (pw + SALT);
-    const cred = {email: userEmail, password: userPass};
-    
+    const cred = {email:emailFor(name), password:pw + SALT};
     let r = await idp('signInWithPassword', cred);
     if(r.error && isAdminName(name) && /INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND/.test(r.error.message)){
       const r2 = await idp('signUp', cred);
@@ -488,10 +481,10 @@ async function doLogin(f){
       return toast('Λάθος όνομα ή κωδικός');
     }
     tok = {id:r.idToken, exp:Date.now() + (+r.expiresIn) * 1000};
-    session = {uid:r.localId, refreshToken:r.refreshToken, name: 'peri', role:'admin'};
-    
+    session = {uid:r.localId, refreshToken:r.refreshToken, name, role:'user'};
     let u = await (await api('GET', '/users/' + r.localId + '.json')).json();
     if(!u){
+      if(!isAdminName(name)){ logout('Ο λογαριασμός δεν έχει πρόσβαση. Ζήτα από τον διαχειριστή.'); return; }
       u = {name:ADMIN_NAME, role:'admin', created:Date.now()};
       await api('PUT', '/users/' + r.localId + '.json', u);
     }
