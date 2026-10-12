@@ -1,565 +1,587 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="el">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Περίπτερο - Διαχείριση</title>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <style>
-        :root {
-            --primary: #1e293b;
-            --accent: #0284c7;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --text: #334155;
-            --border: #cbd5e1;
-            --danger: #ef4444;
-            --success: #22c55e;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background: var(--bg); color: var(--text); padding-bottom: 70px; }
-        header { background: var(--primary); color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        header h1 { font-size: 1.2rem; }
-        .shift-badge { background: var(--accent); padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.85rem; }
-        
-        /* Login Screen */
-        #login-screen { position: fixed; inset: 0; background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 1rem; }
-        .login-card { background: white; padding: 2rem; border-radius: 12px; width: 100%; max-width: 360px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .login-card h2 { margin-bottom: 1.5rem; color: var(--primary); text-align: center; }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; font-weight: bold; }
-        .form-group input { width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; }
-        .btn { width: 100%; background: var(--accent); color: white; border: none; padding: 0.75rem; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; }
-        .btn:hover { opacity: 0.9; }
-
-        /* Navigation */
-        nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 0.5rem 0; z-index: 99; }
-        nav button { background: none; border: none; font-size: 0.75rem; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; flex: 1; }
-        nav button.active { color: var(--accent); font-weight: bold; }
-        nav button span.icon { font-size: 1.2rem; }
-
-        /* Content Sections */
-        .container { padding: 1rem; max-width: 800px; margin: 0 auto; }
-        .section { display: none; }
-        .section.active { display: block; }
-        
-        /* Cards & Lists */
-        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .flex-row { display: flex; justify-content: space-between; align-items: center; }
-        input, select, textarea { padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.95rem; }
-        .actions { display: flex; gap: 0.5rem; }
-        .icon-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0.2rem; }
-        .btn-danger { color: var(--danger); }
-        .btn-edit { color: var(--accent); }
-
-        /* Undo Toast */
-        #undo-toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 0.6rem 1.2rem; border-radius: 20px; display: none; align-items: center; gap: 1rem; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
-        #undo-toast button { background: var(--accent); color: white; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        
-        .header-action { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        h2 { font-size: 1.4rem; color: var(--primary); }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f5c4a">
+<title>Περίπτερο</title>
+<style>
+:root{
+  --bg:#eef1ec;--card:#ffffff;--ink:#1b2421;--mut:#5f6f69;--line:#d3dbd5;
+  --g:#1f5c4a;--onp:#ffffff;--amb:#f2a900;--red:#c4402f;--ok:#2e7d4f;
+  --font:"Trebuchet MS","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#111a17;--card:#1a2521;--ink:#e8efeb;--mut:#93a39c;--line:#2a3933;--g:#58b895;--onp:#0d1613;--red:#e0705f;--ok:#5fc08a}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--font);padding-top:env(safe-area-inset-top,0px)}
+header{position:sticky;top:0;z-index:5;display:flex;gap:12px;align-items:center;justify-content:space-between;
+  background:var(--g);color:var(--onp);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));margin-top:calc(-1*env(safe-area-inset-top,0px))}
+.brand{font-weight:700;font-size:19px;letter-spacing:.2px}
+.who{display:flex;align-items:center;gap:8px;font-size:14px}
+.who input{width:130px;min-height:38px;border:0;border-radius:8px;padding:6px 10px;font:inherit;font-size:16px;background:rgba(255,255,255,.95);color:#1b2421}
+main{max-width:720px;margin:0 auto;padding:12px 12px calc(96px + env(safe-area-inset-bottom,0px))}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;overflow-x:auto;background:var(--card);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px);scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:1 0 auto;min-width:78px;min-height:62px;background:none;border:0;border-top:3px solid transparent;color:var(--mut);font:inherit;font-size:12px;padding:6px 8px;cursor:pointer}
+nav button b{display:block;font-size:22px;line-height:1.2;font-weight:400}
+nav button.on{color:var(--g);border-top-color:var(--amb);font-weight:700}
+h2{margin:0 0 4px;font-size:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid>input:first-child,.grid>button.primary,.grid>.full{grid-column:1/-1}
+input,select,textarea{width:100%;min-height:48px;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+input:focus,button:focus-visible{outline:3px solid var(--amb);outline-offset:1px}
+button{font:inherit;cursor:pointer}
+.primary,.ok,.danger,.ghost,.chip{min-height:48px;border-radius:10px;border:1px solid transparent;padding:8px 14px;font-weight:700}
+.primary{background:var(--g);color:var(--onp)}
+.ok{background:var(--ok);color:#fff}
+.danger{background:none;color:var(--red);border-color:var(--red)}
+.ghost{background:none;color:var(--g);border-color:var(--line)}
+.chip{min-height:40px;background:var(--card);border-color:var(--line);color:var(--ink);font-weight:400}
+.chip.on{background:var(--g);color:var(--onp);border-color:var(--g)}
+.row{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.item .t{font-weight:700;overflow-wrap:anywhere}
+.muted,.by{color:var(--mut);font-size:14px}
+.by{font-weight:400}
+.sm{min-height:44px;min-width:44px;padding:4px 10px;font-size:18px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.big{font-size:34px;font-weight:700}
+.owe{color:var(--red)}
+.pos{color:var(--ok)}
+.badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700;background:var(--line);color:var(--ink)}
+.badge.warn{background:var(--amb);color:#1b2421}
+.badge.bad{background:var(--red);color:#fff}
+.done .t{text-decoration:line-through;color:var(--mut)}
+.empty{text-align:center;color:var(--mut);padding:28px 8px}
+.stock{min-width:118px}
+.stock.out{background:var(--red);color:#fff}
+.stock.in{background:var(--ok);color:#fff}
+#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1b2421;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;max-width:90%}
+#toast.show{opacity:1}
+a{color:var(--g);font-weight:700}
+.sync{font-size:12px;opacity:.9}
+.who button{min-height:38px;border:0;border-radius:8px;padding:6px 12px;background:rgba(255,255,255,.2);color:inherit;font-weight:700}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);color:var(--ink);width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto}
+.sheet p{margin:0 0 14px}
+.fld{display:block;margin-bottom:10px;font-size:14px;color:var(--mut)}
+.fld input{margin-top:4px}
+.price{white-space:nowrap;font-size:18px}
+#toast button{margin-left:10px;background:var(--amb);color:#1b2421;border:0;border-radius:8px;padding:6px 12px;font-weight:700;min-height:36px}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
 </head>
 <body>
+<header>
+  <div><div class="brand">Περίπτερο</div><div id="sync" class="sync"></div></div>
+  <div id="hdr" class="who"></div>
+</header>
+<main id="main"></main>
+<nav id="nav" aria-label="Ενότητες"></nav>
+<div id="toast" role="status"></div>
 
-    <!-- Login Screen -->
-    <div id="login-screen">
-        <div class="login-card">
-            <h2>Περίπτερο Login</h2>
-            <div class="form-group">
-                <label>Όνομα Χρήστη</label>
-                <input type="text" id="login-user" placeholder="π.χ. peri ή Stavros">
-            </div>
-            <div class="form-group">
-                <label>Κωδικός</label>
-                <input type="password" id="login-pass" placeholder="Κωδικός">
-            </div>
-            <button class="btn" onclick="appLogin()">Είσοδος</button>
-            <p id="login-error" style="color:var(--danger); font-size:0.85rem; margin-top:0.5rem; text-align:center;"></p>
-        </div>
-    </div>
+<script>
+/* ====== ΡΥΘΜΙΣΕΙΣ ====== */
+const FIREBASE_DB_URL  = 'https://peri-a7907-default-rtdb.europe-west1.firebasedatabase.app';   
+const FIREBASE_API_KEY = 'AIzaSyDVOH07_oS1fpNW78nAu9c5XLxdTZC50wA';   
+const ADMIN_NAME = 'peri';     
+const SALT = 'peripteros!';    
+/* ======================================================== */
+const DB = FIREBASE_DB_URL.replace(/\/+$/, ''), AUTH = !!(DB && FIREBASE_API_KEY);
+const SKEY = 'peripteros-session';
+let session = null, tok = {id:'', exp:0}, users = null;
+const KEY = 'peripteros-v1';
+const blank = () => ({user:'', products:[], needs:[], cash:[], debtors:[], entries:[], contacts:[]});
+function migrate(s){ s.entries = s.entries || []; s.debtors.forEach(c => { if(Array.isArray(c.entries)){ c.entries.forEach(e => s.entries.push({...e, debtor:c.id})); delete c.entries; } }); delete s.cigs; delete s.expiry; return s; }
+function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStorage.getItem(KEY)) || {})); }catch(e){ return blank(); } }
+let S = load();
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Δεν έγινε αποθήκευση!'); } sync(); }
 
-    <!-- Main Header -->
-    <header>
-        <h1 id="app-title">Περίπτερο</h1>
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-            <span class="shift-badge" id="shift-display">Βάρδια: -</span>
-            <button onclick="appLogout()" style="background:none; border:1px solid white; color:white; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.8rem; cursor:pointer;">Έξοδος</button>
-        </div>
-    </header>
+let tab = 'prod', openDebtor = null, editId = null, q = '', cigFilter = 'all';
 
-    <!-- Main Container -->
-    <div class="container">
-        
-        <!-- 1. Προϊόντα -->
-        <div id="sec-products" class="section active">
-            <div class="header-action">
-                <h2>Προϊόντα</h2>
-            </div>
-            <div class="card">
-                <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
-                    <input type="text" id="prod-name" placeholder="Όνομα προϊόντος" style="flex:2;">
-                    <input type="number" id="prod-price" placeholder="Τιμή (€)" style="flex:1;" step="0.05">
-                    <button class="btn" style="width:auto; padding:0 1rem;" onclick="saveProduct()">+</button>
-                </div>
-            </div>
-            <div id="products-list"></div>
-        </div>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const num = v => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? null : n; };
+const eur = n => n == null ? '' : n.toLocaleString('el-GR', {style:'currency', currency:'EUR'});
+const dt = t => new Date(t).toLocaleString('el-GR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+const dd = s => new Date(s + 'T00:00:00').toLocaleDateString('el-GR');
+const who = () => AUTH ? (session ? session.name : '') : S.user.trim();
+const isAdmin = () => !AUTH || (!!session && session.role === 'admin');
+const canDel = x => isAdmin() || (!!x && !!x.by && x.by === who());
+const delBtn = (act, x) => canDel(x) ? `<button class="danger sm" data-act="${act}" data-id="${x.id}" aria-label="Διαγραφή">✕</button>` : '';
+const tag = x => (x.by ? ` <span class="by">– ${esc(x.by)}</span>` : '') + (x.ed && x.ed !== x.by ? ` <span class="by">(επεξ. ${esc(x.ed)})</span>` : '');
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const match = s => !q || norm(s).includes(norm(q));
+const val = (f, n) => (f.get(n) || '').trim();
+const empty = t => `<div class="empty">${t}</div>`;
+let tt;
+function toast(m, act){
+  const el = $('#toast'); el.innerHTML = esc(m) + (act ? ` <button id="tact">${esc(act.label)}</button>` : '');
+  el.style.pointerEvents = act ? 'auto' : 'none'; el.classList.add('show');
+  if(act) $('#tact').onclick = () => { act.fn(); el.classList.remove('show'); };
+  clearTimeout(tt); tt = setTimeout(() => el.classList.remove('show'), act ? 6000 : 1800);
+}
+const mk = html => { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = html; document.body.appendChild(m); return m; };
+function ask(msg, yes = 'Συνέχεια'){
+  return new Promise(res => {
+    const m = mk(`<div class="sheet"><p>${esc(msg)}</p><div class="row"><button class="ghost" data-r="0">Άκυρο</button><button class="danger" data-r="1">${esc(yes)}</button></div></div>`);
+    m.onclick = e => { const b = e.target.closest('[data-r]'); if(b || e.target === m){ m.remove(); res(!!b && b.dataset.r === '1'); } };
+  });
+}
+function formModal(title, fields, vals = {}){
+  return new Promise(res => {
+    const m = mk(`<form class="sheet"><h2>${esc(title)}</h2>${fields.map(f => `<label class="fld">${esc(f.label)}<input name="${f.name}" type="${f.type \vert{}\vert{} 'text'}" ${f.inputmode ? `inputmode="${f.inputmode}"` : ''} value="${esc(vals[f.name] ?? '')}" ${f.required ? 'required' : ''} autocomplete="off"></label>`).join('')}
+      <div class="row" style="margin-top:6px"><button type="button" class="ghost" data-cancel>Ακύρωση</button><button class="primary">Αποθήκευση</button></div></form>`);
+    const close = v => { m.remove(); res(v); };
+    m.querySelector('form').onsubmit = e => { e.preventDefault(); const o = {}; new FormData(e.target).forEach((v, k) => o[k] = String(v).trim()); close(o); };
+    m.querySelector('[data-cancel]').onclick = () => close(null);
+    m.onclick = e => { if(e.target === m) close(null); };
+    const first = m.querySelector('input'); if(first) setTimeout(() => first.focus(), 50);
+  });
+}
+const toLocal = ts => { const d = new Date(ts); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+const editBtn = (act, x) => `<button class="chip sm" data-act="${act}" data-id="${x.id}" aria-label="Επεξεργασία">✎</button>`;
+function delItem(col, id){
+  const i = S[col].findIndex(x => x.id === id); if(i < 0) return;
+  const [it] = S[col].splice(i, 1);
+  save(); render();
+  toast('Διαγράφηκε', {label:'Αναίρεση', fn:() => { S[col].push(it); save(); render(); }});
+}
+async function editItem(kind, id){
+  const col = {need:'needs', cash:'cash', debtor:'debtors', entry:'entries', tel:'contacts', prod:'products'}[kind];
+  const x = col && S[col].find(i => i.id === id); if(!x) return;
+  let v;
+  if(kind === 'need'){ v = await formModal('Επεξεργασία', [{name:'text', label:'Τι θέλουμε να αγοράσουμε', required:1}], {text:x.text}); if(!v) return; x.text = v.text; }
+  if(kind === 'debtor'){ v = await formModal('Μετονομασία πελάτη', [{name:'name', label:'Όνομα', required:1}], {name:x.name}); if(!v) return; x.name = v.name; }
+  if(kind === 'prod'){
+    v = await formModal('Επεξεργασία προϊόντος', [{name:'name', label:'Προϊόν', required:1}, {name:'price', label:'Τιμή €', inputmode:'decimal'}], {name:x.name, price:x.price == null ? '' : x.price});
+    if(!v) return; x.name = v.name; x.price = num(v.price);
+  }
+  if(kind === 'cash'){
+    v = await formModal('Επεξεργασία ταμείου', [{name:'amount', label:'Ποσό €', inputmode:'decimal', required:1}, {name:'when', label:'Ημερομηνία/ώρα', type:'datetime-local'}], {amount:x.amount, when:toLocal(x.at)});
+    if(!v) return; const a = num(v.amount); if(a == null) return toast('Βάλε ποσό');
+    x.amount = a; if(v.when) x.at = new Date(v.when).getTime();
+  }
+  if(kind === 'entry'){
+    v = await formModal(x.pay ? 'Επεξεργασία πληρωμής' : 'Επεξεργασία χρέωσης', [{name:'item', label:'Τι πήρε'}, {name:'amount', label:'Ποσό €', inputmode:'decimal'}], {item:x.item, amount:x.amount == null ? '' : Math.abs(x.amount)});
+    if(!v) return; const a = num(v.amount);
+    if(x.pay){ if(a == null) return toast('Βάλε ποσό'); x.amount = -Math.abs(a); }
+    else { if(a == null && !v.item) return toast('Βάλε προϊόν ή ποσό'); x.amount = a == null ? null : Math.abs(a); }
+    x.item = v.item;
+  }
+  if(kind === 'tel'){
+    v = await formModal('Επεξεργασία επαφής', [{name:'name', label:'Όνομα', required:1}, {name:'phone', label:'Τηλέφωνο', type:'tel', inputmode:'tel'}, {name:'note', label:'Σημείωση'}], x);
+    if(!v) return; x.name = v.name; x.phone = v.phone; x.note = v.note;
+  }
+  x.ed = who(); save(); render(); toast('Αποθηκεύτηκε');
+}
 
-        <!-- 2. Βερεσέ -->
-        <div id="sec-verese" class="section">
-            <div class="header-action">
-                <h2>Βερεσέ</h2>
-            </div>
-            <div class="card">
-                <input type="text" id="ver-client" placeholder="Όνομα πελάτη" style="width:100%; margin-bottom:0.5rem;">
-                <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
-                    <input type="number" id="ver-amount" placeholder="Ποσό (€)" style="flex:1;" step="0.05">
-                    <select id="ver-type" style="flex:1;">
-                        <option value="charge">Χρέωση (+)</option>
-                        <option value="payment">Πληρωμή (-)</option>
-                    </select>
-                </div>
-                <input type="text" id="ver-note" placeholder="Σημείωση (προαιρετικά)" style="width:100%; margin-bottom:0.5rem;">
-                <button class="btn" onclick="saveVerese()">Καταχώρηση</button>
-            </div>
-            <div id="verese-list"></div>
-        </div>
+const TABS = [
+  ['prod','📦','Προϊόντα'],
+  ['debt','👥','Βερεσέ'],
+  ['cash','💰','Ταμείο'],
+  ['needs','📝','Ελλείψεις'],
+  ['tel','📞','Τηλέφωνα'],
+  ['backup','⚙️','Ρυθμίσεις'],
+];
 
-        <!-- 3. Ταμείο -->
-        <div id="sec-cash" class="section">
-            <div class="header-action">
-                <h2>Ταμείο</h2>
-            </div>
-            <div class="card">
-                <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
-                    <input type="number" id="cash-amount" placeholder="Ποσό (€)" style="flex:1;" step="0.05">
-                    <button class="btn" style="width:auto; padding:0 1.5rem;" onclick="saveCash()">Προσθήκη</button>
-                </div>
-            </div>
-            <div id="cash-list"></div>
-        </div>
+/* ---------- Ελλείψεις ---------- */
+function vNeeds(){
+  const open = S.needs.filter(n => !n.done), done = S.needs.filter(n => n.done);
+  const row = n => `<div class="item row ${n.done ? 'done' : ''}">
+    <div><div class="t">${esc(n.text)}${tag(n)}</div></div>
+    <div class="row"><button class="chip" data-act="needDone" data-id="${n.id}">${n.done ? 'Επαναφορά' : 'Αγοράστηκε'}</button>
+    ${editBtn('needEdit', n)}${delBtn('needDel', n)}</div></div>`;
+  return `<form data-form="need" class="card"><div class="row"><input name="text" placeholder="Τι θέλουμε να αγοράσουμε;" required autocomplete="off"><button class="primary">Προσθήκη</button></div></form>
+  <div class="tools"><button class="ghost" data-act="needCopy">Αντιγραφή λίστας</button>${done.length ? '<button class="ghost" data-act="needClear">Καθάρισμα αγορασμένων</button>' : ''}</div>
+  ${open.length ? open.map(row).join('') : empty('Η λίστα είναι άδεια.')}
+  ${done.length ? `<h2 class="muted" style="font-size:15px;margin-top:16px">Αγοράστηκαν</h2>${done.map(row).join('')}` : ''}`;
+}
 
-        <!-- 4. Ελλείψεις -->
-        <div id="sec-gaps" class="section">
-            <div class="header-action">
-                <h2>Ελλείψεις</h2>
-                <button class="btn" style="width:auto; font-size:0.85rem; padding:0.4rem 0.8rem;" onclick="copyGaps()">Αντιγραφή Λίστας</button>
-            </div>
-            <div class="card">
-                <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
-                    <input type="text" id="gap-name" placeholder="Τι λείπει;" style="flex:1;">
-                    <button class="btn" style="width:auto; padding:0 1rem;" onclick="saveGap()">+</button>
-                </div>
-            </div>
-            <div id="gaps-list"></div>
-        </div>
+/* ---------- Ταμείο ---------- */
+function vCash(){
+  const l = [...S.cash].sort((a, b) => b.at - a.at);
+  return `<form data-form="cash" class="card grid">
+    <input class="full" name="amount" inputmode="decimal" placeholder="Ποσό στο ταμείο €" required>
+    <input class="full" name="when" type="datetime-local" aria-label="Ημερομηνία/ώρα (αν μείνει κενό, μπαίνει η τωρινή)">
+    <button class="primary">Καταχώρηση ταμείου</button></form>
+  <p class="muted" style="margin:0 0 10px">Αν αφήσεις κενή την ώρα, μπαίνει αυτόματα η τωρινή.</p>
+  ${l.length ? l.map(c => `<div class="item row"><div class="t">${eur(c.amount)}${tag(c)} <span class="by">– ${dt(c.at)}</span></div>
+    ${editBtn('cashEdit', c)}${delBtn('cashDel', c)}</div>`).join('') : empty('Κανένα ταμείο ακόμα.')}`;
+}
 
-        <!-- 5. Τηλέφωνα -->
-        <div id="sec-phones" class="section">
-            <div class="header-action">
-                <h2>Τηλέφωνα</h2>
-            </div>
-            <div class="card">
-                <input type="text" id="ph-name" placeholder="Όνομα / Επαφή" style="width:100%; margin-bottom:0.5rem;">
-                <input type="text" id="ph-num" placeholder="Τηλέφωνο" style="width:100%; margin-bottom:0.5rem;">
-                <input type="text" id="ph-note" placeholder="Σημείωση" style="width:100%; margin-bottom:0.5rem;">
-                <button class="btn" onclick="savePhone()">Αποθήκευση</button>
-            </div>
-            <div id="phones-list"></div>
-        </div>
+/* ---------- Βερεσέ ---------- */
+const owed = c => S.entries.filter(e => e.debtor === c.id).reduce((s, e) => s + (e.amount || 0), 0);
+function vDebt(){
+  if(openDebtor){
+    const c = S.debtors.find(x => x.id === openDebtor);
+    if(!c){ openDebtor = null; return vDebt(); }
+    const tot = owed(c);
+    const es = S.entries.filter(e => e.debtor === c.id).sort((a, b) => b.at - a.at);
+    return `<button class="ghost" data-act="back" style="margin-bottom:10px">← Όλοι οι πελάτες</button>
+    <div class="card"><div class="row"><h2>${esc(c.name)}</h2>${editBtn('debtorEdit', c)}</div><div class="big ${tot > 0 ? 'owe' : ''}">${eur(tot)}</div><div class="muted">${tot > 0 ? 'οφείλει' : tot < 0 ? 'πιστωτικό υπόλοιπο' : 'δεν οφείλει'}</div></div>
+    <form data-form="debt" class="card grid">
+      <input class="full" name="item" placeholder="Τι πήρε (προαιρετικό)" autocomplete="off">
+      <input class="full" name="amount" inputmode="decimal" placeholder="Ποσό €">
+      <button class="primary" name="kind" value="debt" style="grid-column:auto">+ Χρέωση</button>
+      <button class="ok" name="kind" value="pay">Πλήρωσε</button></form>
+    ${es.length ? es.map(e => `<div class="item row ${e.pay ? '' : ''}"><div>
+      <div class="t">${e.item ? esc(e.item) : (e.pay ? 'Πληρωμή' : 'Χρέωση')}${tag(e)}</div>
+      <div class="by">${dt(e.at)}</div></div>
+      <div class="row">${e.amount != null ? `<b class="${e.pay ? 'pos' : ''}">${e.pay ? '−' : ''}${eur(Math.abs(e.amount))}</b>` : '<span class="muted">χωρίς ποσό</span>'}
+      ${editBtn('entryEdit', e)}${delBtn('entryDel', e)}</div></div>`).join('') : empty('Καμία κίνηση.')}
+    ${isAdmin() ? '<button class="danger" data-act="debtorDel" style="margin-top:12px;width:100%">Διαγραφή πελάτη</button>' : ''}`;
+  }
+  const l = S.debtors.filter(c => match(c.name)).sort((a, b) => owed(b) - owed(a));
+  const grand = S.debtors.reduce((s, c) => s + Math.max(owed(c), 0), 0);
+  return `<form data-form="debtor" class="card"><div class="row"><input name="name" placeholder="Νέος πελάτης (π.χ. Σταύρος)" required autocomplete="off"><button class="primary">Προσθήκη</button></div></form>
+  <div class="card row"><span>Σύνολο όλων που χρωστούν</span><b class="big owe" style="font-size:24px">${eur(grand)}</b></div>
+  <input data-search placeholder="Αναζήτηση πελάτη…" value="${esc(q)}" style="margin-bottom:10px">
+  <div id="list">${l.length ? l.map(c => { const t = owed(c); return `<div class="item row" data-act="openDebtor" data-id="${c.id}" style="cursor:pointer" tabindex="0">
+    <div class="t">${esc(c.name)}</div><b class="${t > 0 ? 'owe' : ''}">${eur(t)}</b></div>`; }).join('') : empty('Κανένας πελάτης ακόμα.')}</div>`;
+}
 
-        <!-- 6. Ρυθμίσεις -->
-        <div id="sec-settings" class="section">
-            <div class="header-action">
-                <h2>Ρυθμίσεις</h2>
-            </div>
-            <div class="card" id="admin-panel" style="display:none;">
-                <h3 style="font-size:1.1rem; margin-bottom:0.8rem;">Δημιουργία Νέου Λογαριασμού</h3>
-                <input type="text" id="new-user-name" placeholder="Όνομα χρήστη (π.χ. Stavros)" style="width:100%; margin-bottom:0.5rem;">
-                <input type="password" id="new-user-pass" placeholder="Κωδικός" style="width:100%; margin-bottom:0.5rem;">
-                <button class="btn" onclick="createAccount()">Δημιουργία</button>
-                <hr style="margin:1rem 0; border:0; border-top:1px solid var(--border);">
-            </div>
-            <div class="card">
-                <h3 style="font-size:1.1rem; margin-bottom:0.8rem;">Αντίγραφο Ασφαλείας</h3>
-                <button class="btn" onclick="exportData()" style="margin-bottom:0.5rem;">Λήψη Αντιγράφου</button>
-                <input type="file" id="import-file" style="display:none" onchange="importData(event)">
-                <button class="btn" onclick="document.getElementById('import-file').click()" style="background:#64748b;" id="import-btn" disabled>Φόρτωση Αντιγράφου</button>
-                <p style="font-size:0.8rem; color:#64748b; margin-top:0.4rem;">Η φόρτωση αντιγράφου είναι διαθέσιμη μόνο στον διαχειριστή.</p>
-            </div>
-        </div>
+/* ---------- Προϊόντα ---------- */
+function prodList(){
+  const l = S.products.filter(p => match(p.name)).sort((a, b) => a.name.localeCompare(b.name, 'el'));
+  if(!l.length) return empty('Κανένα προϊόν.');
+  return l.map(p => `<div class="item row"><div class="t">${esc(p.name)}${tag(p)}</div>
+    <div class="row">${p.price != null ? `<b class="price">${eur(p.price)}</b>` : ''}${editBtn('prodEdit', p)}${delBtn('prodDel', p)}</div></div>`).join('');
+}
+function vProd(){
+  return `<form data-form="prod" class="card grid">
+    <input class="full" name="name" placeholder="Προϊόν" required autocomplete="off">
+    <input name="price" inputmode="decimal" placeholder="Τιμή €">
+    <button class="primary" style="grid-column:auto">Προσθήκη</button></form>
+  <input data-search placeholder="Αναζήτηση προϊόντος…" value="${esc(q)}" style="margin-bottom:10px">
+  <div id="list">${prodList()}</div>`;
+}
 
-    </div>
+/* ---------- Τηλέφωνα ---------- */
+function vTel(){
+  const l = S.contacts.filter(c => match(c.name + ' ' + (c.note || ''))).sort((a, b) => a.name.localeCompare(b.name, 'el'));
+  return `<form data-form="tel" class="card grid">
+    <input name="name" placeholder="Όνομα (π.χ. Τεχνικός ψυγείων)" required autocomplete="off">
+    <input name="phone" type="tel" inputmode="tel" placeholder="Τηλέφωνο">
+    <input class="full" name="note" placeholder="Σημείωση (προαιρετικό)" autocomplete="off">
+    <button class="primary">Προσθήκη</button></form>
+  <input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">
+  <div id="list">${telList(l)}</div>`;
+}
+function telList(l){
+  if(!l.length) return empty('Καμία επαφή ή σημείωση.');
+  return l.map(c => `<div class="item row"><div><div class="t">${esc(c.name)}</div>
+    ${c.phone ? `<a href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">${esc(c.phone)}</a>` : ''}
+    ${c.note ? `<div class="by">${esc(c.note)}</div>` : ''}</div>
+    ${editBtn('telEdit', c)}${delBtn('telDel', c)}</div>`).join('');
+}
 
-    <!-- Bottom Navigation -->
-    <nav>
-        <button onclick="switchTab('products')" class="active" id="nav-products"><span class="icon">📦</span>Προϊόντα</button>
-        <button onclick="switchTab('verese')" id="nav-verese"><span class="icon">📖</span>Βερεσέ</button>
-        <button onclick="switchTab('cash')" id="nav-cash"><span class="icon">💶</span>Ταμείο</button>
-        <button onclick="switchTab('gaps')" id="nav-gaps"><span class="icon">🛒</span>Ελλείψεις</button>
-        <button onclick="switchTab('phones')" id="nav-phones"><span class="icon">📞</span>Τηλέφωνα</button>
-        <button onclick="switchTab('settings')" id="nav-settings"><span class="icon">⚙️</span>Ρυθμίσεις</button>
-    </nav>
+/* ---------- Αντίγραφο ---------- */
+function vBackup(){
+  return accountCard() + (!isAdmin() ? '' : `<div class="card"><h2>Αντίγραφο ασφαλείας</h2>
+    <p class="muted">Τα δεδομένα μένουν σε αυτή τη συσκευή/πρόγραμμα περιήγησης. Κατέβασε αντίγραφο κάθε τόσο.</p>
+    <div class="tools"><button class="primary" data-act="export">Κατέβασμα αντιγράφου</button>
+    <button class="ghost" data-act="import">Φόρτωση αντιγράφου</button></div>
+    <input type="file" id="file" accept="application/json" hidden></div>
+  <div class="card"><h2>Διαγραφή όλων</h2><p class="muted">Σβήνει όλα τα δεδομένα από αυτή τη συσκευή.</p>
+    <button class="danger" data-act="wipe">Διαγραφή όλων των δεδομένων</button></div>`);
+}
 
-    <!-- Undo Toast -->
-    <div id="undo-toast">
-        <span id="undo-text">Η εγγραφή διαγράφηκε.</span>
-        <button onclick="executeUndo()">Αναίρεση</button>
-    </div>
+const VIEWS = {needs:vNeeds, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
 
-    <script>
-        // FIREBASE CONFIG (Συμπληρωμένα από εσένα)
-        const FIREBASE_DB_URL = "https://peri-a7907-default-rtdb.europe-west1.firebasedatabase.app";
-        const FIREBASE_API_KEY = "AIzaSyDVOH07_oS1fpNW78nAu9c5XLxdTZC50wA";
+function render(){
+  renderHeader();
+  if(AUTH && !session){ $('#main').innerHTML = loginView(); $('#nav').innerHTML = ''; return; }
+  $('#main').innerHTML = VIEWS[tab]();
+  $('#nav').innerHTML = TABS.map(([k, i, l]) => `<button class="${k === tab ? 'on' : ''}" data-tab="${k}" ${k === tab ? 'aria-current="page"' : ''}><b>${i}</b>${l}</button>`).join('');
+}
+function go(t){ tab = t; q = ''; editId = null; openDebtor = null; if(t === 'backup' && AUTH && session && isAdmin()) loadUsers(); render(); window.scrollTo(0, 0); $('#nav .on')?.scrollIntoView({inline:'center', block:'nearest'}); }
+function toList(){
+  const el = $('#list'); if(!el) return;
+  if(tab === 'prod') el.innerHTML = prodList();
+  if(tab === 'tel') el.innerHTML = telList(S.contacts.filter(c => match(c.name + ' ' + (c.note || ''))).sort((a, b) => a.name.localeCompare(b.name, 'el')));
+  if(tab === 'debt') render(), $('[data-search]').focus(),$('[data-search]').setSelectionRange(q.length, q.length);
+}
 
-        firebase.initializeApp({
-            apiKey: FIREBASE_API_KEY,
-            databaseURL: FIREBASE_DB_URL
-        });
+/* ---------- Φόρμες ---------- */
+document.addEventListener('submit', ev => {
+  const form = ev.target.closest('form[data-form]'); if(!form) return;
+  ev.preventDefault();
+  const f = new FormData(form), kind = form.dataset.form, by = who(), now = Date.now();
+  if(kind === 'login') return doLogin(f);
+  if(kind === 'newuser') return createUser(f);
+  if(kind === 'need') S.needs.unshift({id:uid(), text:val(f, 'text'), by, at:now, done:false});
+  if(kind === 'cash'){
+    const a = num(f.get('amount')); if(a == null) return toast('Βάλε ποσό');
+    const w = f.get('when'); S.cash.push({id:uid(), amount:a, by, at:w ? new Date(w).getTime() : now});
+  }
+  if(kind === 'debtor') S.debtors.push({id:uid(), name:val(f, 'name')});
+  if(kind === 'debt'){
+    const c = S.debtors.find(x => x.id === openDebtor), pay = ev.submitter?.value === 'pay';
+    let a = num(f.get('amount')), item = val(f, 'item');
+    if(pay && a == null) return toast('Βάλε ποσό πληρωμής');
+    if(!pay && a == null && !item) return toast('Βάλε προϊόν ή ποσό');
+    S.entries.push({id:uid(), debtor:c.id, item, amount:a == null ? null : (pay ? -Math.abs(a) : Math.abs(a)), pay, by, at:now});
+  }
+  if(kind === 'prod') S.products.push({id:uid(), name:val(f, 'name'), price:num(f.get('price')), by});
+  if(kind === 'tel') S.contacts.push({id:uid(), name:val(f, 'name'), phone:val(f, 'phone'), note:val(f, 'note')});
+  save(); render(); toast('Αποθηκεύτηκε');
+});
 
-        const auth = firebase.auth();
-        const db = firebase.database();
+/* ---------- Κλικ ---------- */
+document.addEventListener('click', async ev => {
+  const tb = ev.target.closest('[data-tab]'); if(tb) return go(tb.dataset.tab);
+  const b = ev.target.closest('[data-act]'); if(!b) return;
+  const a = b.dataset.act, id = b.dataset.id;
+  if(a.endsWith('Edit')) return editItem(a.slice(0, -4), id);
+  switch(a){
+    case 'needDone': { const n = S.needs.find(x => x.id === id); n.done = !n.done; break; }
+    case 'needDel': delItem('needs', id); return;
+    case 'needClear': if(!await ask('Να σβηστούν όσα αγοράστηκαν;')) return; S.needs = S.needs.filter(n => !n.done); break;
+    case 'needCopy': {
+      const t = S.needs.filter(n => !n.done).map(n => '• ' + n.text).join('\n') || 'Η λίστα είναι άδεια';
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Αντιγράφηκε'), () => toast('Δεν έγινε αντιγραφή'));
+      return;
+    }
+    case 'prodDel': delItem('products', id); return;
+    case 'cashDel': delItem('cash', id); return;
+    case 'entryDel': delItem('entries', id); return;
+    case 'telDel': delItem('contacts', id); return;
+    case 'openDebtor': openDebtor = id; q = ''; render(); window.scrollTo(0, 0); return;
+    case 'back': openDebtor = null; break;
+    case 'debtorDel': {
+      if(!await ask('Διαγραφή πελάτη και όλων των κινήσεών του;', 'Διαγραφή')) return;
+      const did = openDebtor; S.entries = S.entries.filter(e => e.debtor !== did);
+      S.debtors = S.debtors.filter(c => c.id !== did); openDebtor = null; break;
+    }
+    case 'logout':
+      if(remote && Object.keys(diff(remote, localMaps())).length && !await ask('Υπάρχουν αλλαγές που δεν έχουν σταλεί ακόμα. Έξοδος παρ’ όλα αυτά;')) return;
+      logout(); return;
+    case 'userDel': if(!await ask('Διαγραφή λογαριασμού; Δεν θα μπορεί πια να μπει.', 'Διαγραφή')) return; deleteUser(id); return;
+    case 'export': {
+      const a2 = document.createElement('a');
+      a2.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], {type:'application/json'}));
+      a2.download = 'peripteros-' + new Date().toISOString().slice(0, 10) + '.json'; a2.click(); return;
+    }
+    case 'import': $('#file').click(); return;
+    case 'wipe':
+      if(!await ask(AUTH ? 'Σίγουρα; Θα σβηστούν ΟΛΑ για ΟΛΕΣ τις συσκευές.' : 'Σίγουρα; Θα σβηστούν ΟΛΑ.', 'Διαγραφή')) return;
+      if(!await ask('Τελευταία ερώτηση: διαγραφή όλων των δεδομένων;', 'Ναι, διαγραφή')) return;
+      S = blank(); break;
+  }
+  save(); render();
+});
+document.addEventListener('keydown', ev => {
+  if((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[data-act="openDebtor"]')){ ev.preventDefault(); ev.target.click(); }
+});
+document.addEventListener('change', async ev => {
+  if(ev.target.id !== 'file') return;
+  const file = ev.target.files[0]; ev.target.value = ''; if(!file) return;
+  if(AUTH && !await ask('Η φόρτωση αντικαθιστά τα κοινά δεδομένα για όλους. Συνέχεια;')) return;
+  const r = new FileReader();
+  r.onload = () => { try{ S = migrate(Object.assign(blank(), JSON.parse(r.result))); save(); render(); toast('Φορτώθηκε'); }catch(e){ toast('Μη έγκυρο αρχείο'); } };
+  r.readAsText(file);
+});
+document.addEventListener('input', ev => {
+  if(ev.target.matches('[data-search]')){ q = ev.target.value; toList(); }
+});
+/* ---------- Λογαριασμοί και συγχρονισμός (Firebase, REST) ---------- */
+const COLS = ['products','needs','cash','debtors','entries','contacts'];
+let remote = null, syncing = false, again = false, needRender = false, es = null, rp = null;
+const clone = o => JSON.parse(JSON.stringify(o));
+const toMap = arr => Object.fromEntries(arr.map(x => [x.id, x]));
+const fromMap = o => Object.values(o || {});
+const localMaps = () => { const m = {}; COLS.forEach(c => m[c] = toMap(S[c])); return m; };
+const sig = o => JSON.stringify(o, (k, v) => v === null ? undefined : (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v));
+function diff(a, b){
+  const out = {};
+  COLS.forEach(c => {
+    const A = a[c] || {}, B = b[c] || {};
+    for(const id in B) if(sig(A[id]) !== sig(B[id])) out[c + '/' + id] = B[id];
+    for(const id in A) if(!(id in B)) out[c + '/' + id] = null;
+  });
+  return out;
+}
+const typing = () => document.activeElement && document.activeElement.matches && document.activeElement.matches('input');
 
-        let currentUser = null;
-        let dbData = { products: {}, verese: {}, cash: {}, gaps: {}, phones: {} };
-        let lastDeleted = null;
-        let undoTimer = null;
-        let editId = { products: null, verese: null, cash: null, gaps: null, phones: null };
+const normName = n => n.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ς/g, 'σ');
+const hex = t => [...new TextEncoder().encode(t)].map(b => b.toString(16).padStart(2, '0')).join('');
+const emailFor = n => 'u' + hex(normName(n)) + '@peripteros.app';
+const isAdminName = n => normName(n) === normName(ADMIN_NAME);
 
-        // Auth state listener
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('login-screen').style.display = 'none';
-                let displayName = user.email === 'u70657269@peripteros.app' ? 'peri' : user.email.split('@')[0];
-                document.getElementById('shift-display').innerText = 'Βάρδια: ' + displayName;
-                
-                if(user.email === 'u70657269@peripteros.app') {
-                    document.getElementById('admin-panel').style.display = 'block';
-                    document.getElementById('import-btn').disabled = false;
-                }
-                
-                startSync();
-            } else {
-                currentUser = null;
-                document.getElementById('login-screen').style.display = 'flex';
-            }
-        });
+function setStatus(st){
+  const el = $('#sync'); if(!el) return;
+  el.textContent = {off:'Μόνο σε αυτή τη συσκευή', ok:'● Συγχρονισμένο', offline:'● Χωρίς σύνδεση, θα σταλεί αργότερα'}[st] || '';
+}
+function renderHeader(){
+  const h = $('#hdr'); if(!h) return;
+  if(!AUTH){
+    h.innerHTML = '<label>Βάρδια <input id="who" placeholder="Όνομα" autocomplete="off" aria-label="Όνομα βάρδιας"></label>';
+    const i = $('#who'); i.value = S.user; i.addEventListener('input', e => { S.user = e.target.value; save(); });
+  } else if(session){
+    h.innerHTML = `<span>${esc(session.name)}${isAdmin() ? ' (διαχειριστής)' : ''}</span><button data-act="logout">Έξοδος</button>`;
+  } else h.innerHTML = '';
+  if(!AUTH) setStatus('off'); else if(!session) setStatus('');
+}
+function loginView(){
+  return `<form data-form="login" class="card grid" style="margin-top:24px"><h2 class="full" style="margin:0">Είσοδος</h2>
+    <input class="full" name="user" placeholder="Όνομα χρήστη (π.χ. peri)" autocomplete="username" autocapitalize="none" required>
+    <input class="full" name="pass" type="password" placeholder="Κωδικός" autocomplete="current-password" required>
+    <button class="primary">Είσοδος</button></form>`;
+}
+async function idp(ep, body){
+  const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:' + ep + '?key=' + FIREBASE_API_KEY,
+    {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...body, returnSecureToken:true})});
+  return r.json();
+}
+async function refresh(){
+  const r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + FIREBASE_API_KEY, {method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'grant_type=refresh_token&refresh_token=' + encodeURIComponent(session.refreshToken)});
+  const j = await r.json();
+  if(j.error){ logout('Συνδέσου ξανά'); throw new Error('auth'); }
+  tok = {id:j.id_token, exp:Date.now() + (+j.expires_in) * 1000};
+  session.refreshToken = j.refresh_token; saveSession(); stream();
+}
+async function token(){
+  if(!session) throw new Error('auth');
+  if(Date.now() > tok.exp - 60000){ if(!rp) rp = refresh().finally(() => rp = null); await rp; }
+  return tok.id;
+}
+async function api(method, path, body, retry = true){
+  const t = await token();
+  const r = await fetch(DB + path + '?auth=' + encodeURIComponent(t), {method, body: body === undefined ? undefined : JSON.stringify(body)});
+  if(r.status === 401 && retry){ tok.exp = 0; return api(method, path, body, false); }
+  if(r.status === 401){ logout('Δεν έχεις πρόσβαση. Ζήτα από τον διαχειριστή.'); throw new Error('auth'); }
+  if(!r.ok) throw new Error(r.status);
+  return r;
+}
+const saveSession = () => { try{ localStorage.setItem(SKEY, JSON.stringify(session)); }catch(e){} };
+function logout(msg){
+  if(es){ es.close(); es = null; }
+  session = null; tok = {id:'', exp:0}; remote = null; users = null; again = false;
+  localStorage.removeItem(SKEY); localStorage.removeItem(KEY);
+  S = blank(); render(); if(msg) toast(msg);
+}
+async function doLogin(f){
+  const name = (f.get('user') || '').trim(), pw = f.get('pass') || '';
+  if(!name || !pw) return;
+  toast('Σύνδεση…');
+  try{
+    const userEmail = (name === 'peri' || name === 'peri@gmail.com') ? 'peri@gmail.com' : emailFor(name);
+    const userPass = (name === 'peri' || name === 'peri@gmail.com') ? pw : (pw + SALT);
+    const cred = {email: userEmail, password: userPass};
+    
+    let r = await idp('signInWithPassword', cred);
+    if(r.error && isAdminName(name) && /INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND/.test(r.error.message)){
+      const r2 = await idp('signUp', cred);
+      if(!r2.error) r = r2;
+    }
+    if(r.error){
+      if(/OPERATION_NOT_ALLOWED/.test(r.error.message)) return toast('Ενεργοποίησε το Email/Password στο Firebase Authentication');
+      if(/API key/i.test(r.error.message)) return toast('Λάθος API key στο index.html');
+      return toast('Λάθος όνομα ή κωδικός');
+    }
+    tok = {id:r.idToken, exp:Date.now() + (+r.expiresIn) * 1000};
+    session = {uid:r.localId, refreshToken:r.refreshToken, name: 'peri', role:'admin'};
+    
+    let u = await (await api('GET', '/users/' + r.localId + '.json')).json();
+    if(!u){
+      u = {name:ADMIN_NAME, role:'admin', created:Date.now()};
+      await api('PUT', '/users/' + r.localId + '.json', u);
+    }
+    session.name = u.name; session.role = u.role === 'admin' ? 'admin' : 'user';
+    saveSession(); tab = 'prod'; render(); stream(); sync();
+  }catch(e){ if(session && e.message !== 'auth') toast('Χωρίς σύνδεση στο internet'); else if(!session && e.message !== 'auth') toast('Χωρίς σύνδεση στο internet'); }
+}
+async function loadUsers(){
+  try{ users = (await (await api('GET', '/users.json')).json()) || {}; if(tab === 'backup' && !typing()) render(); }catch(e){}
+}
+async function createUser(f){
+  const name = (f.get('user') || '').trim(), pw = f.get('pass') || '';
+  if(name.length < 2 || pw.length < 4) return toast('Όνομα 2+ και κωδικός 4+ χαρακτήρες');
+  if(hex(normName(name)).length > 60) return toast('Πολύ μεγάλο όνομα');
+  if(isAdminName(name)) return toast('Αυτό το όνομα είναι του διαχειριστή');
+  try{
+    const cred = {email:emailFor(name), password:pw + SALT};
+    let r = await idp('signUp', cred);
+    if(r.error){
+      if(!/EMAIL_EXISTS/.test(r.error.message)) return toast('Δεν δημιουργήθηκε: ' + r.error.message);
+      r = await idp('signInWithPassword', cred);
+      if(r.error) return toast('Το όνομα υπάρχει ήδη με άλλον κωδικό');
+    }
+    await api('PUT', '/users/' + r.localId + '.json', {name, role:'user', created:Date.now()});
+    toast('Ο λογαριασμός δημιουργήθηκε'); loadUsers();
+  }catch(e){ if(e.message !== 'auth') toast('Δεν έγινε. Έλεγξε το internet'); }
+}
+async function deleteUser(uid){
+  if(session && uid === session.uid) return;
+  try{ await api('DELETE', '/users/' + uid + '.json'); loadUsers(); toast('Διαγράφηκε'); }catch(e){ toast('Δεν έγινε'); }
+}
+function accountCard(){
+  if(!AUTH) return `<div class="card"><p class="muted" style="margin:0">Λειτουργία χωρίς λογαριασμούς.</p></div>`;
+  let h = `<div class="card row"><div><h2>${esc(session.name)}</h2><div class="muted">${isAdmin() ? 'Διαχειριστής' : 'Χρήστης'}</div></div><button class="ghost" data-act="logout">Έξοδος</button></div>`;
+  if(isAdmin()){
+    const l = Object.entries(users || {}).sort((a, b) => String(a[1].name).localeCompare(String(b[1].name), 'el'));
+    h += `<form data-form="newuser" class="card grid"><h2 class="full" style="margin:0">Νέος λογαριασμός</h2>
+      <input class="full" name="user" placeholder="Όνομα χρήστη" autocomplete="off" autocapitalize="none" required>
+      <input class="full" name="pass" placeholder="Κωδικός (4+ χαρακτήρες)" autocomplete="off" required>
+      <button class="primary">Δημιουργία</button></form>
+      <div class="card"><h2>Λογαριασμοί</h2>${users ? (l.length ? l.map(([id, u]) => `<div class="item row"><div><div class="t">${esc(u.name)}</div><div class="by">${u.role === 'admin' ? 'Διαχειριστής' : 'Χρήστης'}</div></div>
+        ${u.role === 'admin' ? '' : `<button class="danger sm" data-act="userDel" data-id="${esc(id)}" aria-label="Διαγραφή λογαριασμού">✕</button>`}</div>`).join('') : '<div class="muted">Κανένας ακόμα.</div>') : '<div class="muted">Φόρτωση…</div>'}</div>`;
+  }
+  return h;
+}
 
-        function appLogin() {
-            let u = document.getElementById('login-user').value.trim();
-            let p = document.getElementById('login-pass').value;
-            if(!u || !p) {
-                document.getElementById('login-error').innerText = 'Συμπλήρωσε όλα τα πεδία';
-                return;
-            }
-            let email = u.toLowerCase() === 'peri' ? 'u70657269@peripteros.app' : u.toLowerCase() + '@peripteros.app';
-            let pass = p + '_fix6'; // Προσθήκη σταθερού κομματιού για 6+ χαρακτήρες
+async function sync(){
+  if(!AUTH || !session) return setStatus(AUTH ? '' : 'off');
+  if(syncing){ again = true; return; }
+  syncing = true;
+  try{
+    do{
+      again = false;
+      if(remote){
+        const snap = localMaps(), d = diff(remote, snap);
+        if(Object.keys(d).length){ await api('PATCH', '/data.json', d); remote = clone(snap); }
+      }
+      const data = (await (await api('GET', '/data.json')).json()) || {}, sm = {};
+      if(!session) break;
+      COLS.forEach(c => sm[c] = data[c] || {});
+      if(!remote){
+        COLS.forEach(c => { const ids = new Set(Object.keys(sm[c])); S[c] = fromMap(sm[c]).concat(S[c].filter(x => !ids.has(x.id))); });
+        remote = sm; needRender = true; again = true; continue;
+      }
+      if(Object.keys(diff(remote, localMaps())).length){ again = true; continue; }
+      if(sig(sm) !== sig(localMaps())){ COLS.forEach(c => S[c] = fromMap(sm[c])); needRender = true; }
+      remote = sm;
+    }while(again);
+    if(session){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} setStatus('ok'); }
+  }catch(e){ setStatus(session ? 'offline' : ''); }
+  finally{ syncing = false; }
+  if(needRender && !typing()){ needRender = false; render(); }
+}
+function stream(){
+  if(es){ es.close(); es = null; }
+  if(!AUTH || !session || !tok.id || !window.EventSource) return;
+  es = new EventSource(DB + '/data.json?auth=' + encodeURIComponent(tok.id));
+  ['put', 'patch'].forEach(t => es.addEventListener(t, () => sync()));
+  es.addEventListener('auth_revoked', () => { tok.exp = 0; sync(); });
+}
+function boot(){
+  if(AUTH){ try{ session = JSON.parse(localStorage.getItem(SKEY)); }catch(e){} if(!session) S = blank(); }
+  render();
+  if(AUTH && session){ setStatus('offline'); sync(); }
+}
+setInterval(sync, 60000);
+addEventListener('online', sync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) sync(); });
 
-            auth.signInWithEmailAndPassword(email, pass).catch(err => {
-                if (err.code === 'auth/user-not-found' && u.toLowerCase() === 'peri') {
-                    auth.createUserWithEmailAndPassword(email, pass).catch(e => {
-                        document.getElementById('login-error').innerText = e.message;
-                    });
-                } else {
-                    document.getElementById('login-error').innerText = 'Λάθος στοιχεία ή κωδικός';
-                }
-            });
-        }
-
-        function appLogout() { auth.signOut(); }
-
-        function createAccount() {
-            let u = document.getElementById('new-user-name').value.trim();
-            let p = document.getElementById('new-user-pass').value;
-            if(!u || !p) { alert('Συμπλήρωσε τα πεδία'); return; }
-            let email = u.toLowerCase() + '@peripteros.app';
-            let pass = p + '_fix6';
-
-            // Δημιουργία δευτερεύοντος client app για να μην χαθεί ο admin session
-            let secondaryApp = firebase.initializeApp({ apiKey: FIREBASE_API_KEY, databaseURL: FIREBASE_DB_URL }, "Secondary");
-            secondaryApp.auth().createUserWithEmailAndPassword(email, pass).then(cred => {
-                db.ref('users/' + cred.user.uid).set(true);
-                secondaryApp.delete();
-                alert('Ο λογαριασμός δημιουργήθηκε επιτυχώς!');
-                document.getElementById('new-user-name').value = '';
-                document.getElementById('new-user-pass').value = '';
-            }).catch(e => { alert('Σφάλμα: ' + e.message); secondaryApp.delete(); });
-        }
-
-        function startSync() {
-            db.ref('data').on('value', snapshot => {
-                dbData = snapshot.val() || { products: {}, verese: {}, cash: {}, gaps: {}, phones: {} };
-                renderAll();
-            });
-        }
-
-        function saveDataNode(node, data) {
-            db.ref('data/' + node).set(data);
-        }
-
-        // Tab Navigation
-        function switchTab(tab) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-            document.getElementById('sec-' + tab).classList.add('active');
-            document.getElementById('nav-' + tab).classList.add('active');
-        }
-
-        function getShiftName() {
-            if(!currentUser) return 'Άγνωστος';
-            return currentUser.email === 'u70657269@peripteros.app' ? 'peri' : currentUser.email.split('@')[0];
-        }
-
-        // 1. Προϊόντα
-        function saveProduct() {
-            let name = document.getElementById('prod-name').value.trim();
-            let price = parseFloat(document.getElementById('prod-price').value);
-            if(!name || isNaN(price)) return;
-
-            let id = editId.products || 'p_' + Date.now();
-            if(!dbData.products) dbData.products = {};
-            
-            dbData.products[id] = { name, price, user: getShiftName() };
-            saveDataNode('products', dbData.products);
-            
-            document.getElementById('prod-name').value = '';
-            document.getElementById('prod-price').value = '';
-            editId.products = null;
-        }
-
-        function editProduct(id) {
-            let p = dbData.products[id];
-            document.getElementById('prod-name').value = p.name;
-            document.getElementById('prod-price').value = p.price;
-            editId.products = id;
-        }
-
-        // 2. Βερεσέ
-        function saveVerese() {
-            let client = document.getElementById('ver-client').value.trim();
-            let amount = parseFloat(document.getElementById('ver-amount').value);
-            let type = document.getElementById('ver-type').value;
-            let note = document.getElementById('ver-note').value.trim();
-            if(!client || isNaN(amount)) return;
-
-            let id = editId.verese || 'v_' + Date.now();
-            if(!dbData.verese) dbData.verese = {};
-
-            dbData.verese[id] = { client, amount: type === 'payment' ? -amount : amount, note, user: getShiftName(), date: new Date().toLocaleString() };
-            saveDataNode('verese', dbData.verese);
-
-            document.getElementById('ver-client').value = '';
-            document.getElementById('ver-amount').value = '';
-            document.getElementById('ver-note').value = '';
-            editId.verese = null;
-        }
-
-        // 3. Ταμείο
-        function saveCash() {
-            let amount = parseFloat(document.getElementById('cash-amount').value);
-            if(isNaN(amount)) return;
-
-            let id = 'c_' + Date.now();
-            if(!dbData.cash) dbData.cash = {};
-
-            dbData.cash[id] = { amount, date: new Date().toLocaleString(), user: getShiftName() };
-            saveDataNode('cash', dbData.cash);
-            document.getElementById('cash-amount').value = '';
-        }
-
-        // 4. Ελλείψεις
-        function saveGap() {
-            let name = document.getElementById('gap-name').value.trim();
-            if(!name) return;
-
-            let id = 'g_' + Date.now();
-            if(!dbData.gaps) dbData.gaps = {};
-
-            dbData.gaps[id] = { name, bought: false, user: getShiftName() };
-            saveDataNode('gaps', dbData.gaps);
-            document.getElementById('gap-name').value = '';
-        }
-
-        function toggleGap(id) {
-            if(dbData.gaps[id]) {
-                dbData.gaps[id].bought = !dbData.gaps[id].bought;
-                saveDataNode('gaps', dbData.gaps);
-            }
-        }
-
-        function copyGaps() {
-            let text = "Ελλείψεις Περιπτέρου:\n";
-            for(let id in dbData.gaps) {
-                let g = dbData.gaps[id];
-                if(!g.bought) text += "- " + g.name + "\n";
-            }
-            navigator.clipboard.writeText(text);
-            alert('Η λίστα αντιγράφηκε!');
-        }
-
-        // 5. Τηλέφωνα
-        function savePhone() {
-            let name = document.getElementById('ph-name').value.trim();
-            let num = document.getElementById('ph-num').value.trim();
-            let note = document.getElementById('ph-note').value.trim();
-            if(!name) return;
-
-            let id = editId.phones || 'ph_' + Date.now();
-            if(!dbData.phones) dbData.phones = {};
-
-            dbData.phones[id] = { name, num, note, user: getShiftName() };
-            saveDataNode('phones', dbData.phones);
-
-            document.getElementById('ph-name').value = '';
-            document.getElementById('ph-num').value = '';
-            document.getElementById('ph-note').value = '';
-            editId.phones = null;
-        }
-
-        function editPhone(id) {
-            let ph = dbData.phones[id];
-            document.getElementById('ph-name').value = ph.name;
-            document.getElementById('ph-num').value = ph.num;
-            document.getElementById('ph-note').value = ph.note;
-            editId.phones = id;
-        }
-
-        // General Delete & Undo
-        function deleteItem(node, id) {
-            let item = dbData[node][id];
-            lastDeleted = { node, id, item };
-            delete dbData[node][id];
-            saveDataNode(node, dbData[node]);
-
-            let toast = document.getElementById('undo-toast');
-            toast.style.display = 'flex';
-            clearTimeout(undoTimer);
-            undoTimer = setTimeout(() => { toast.style.display = 'none'; lastDeleted = null; }, 4000);
-        }
-
-        function executeUndo() {
-            if(!lastDeleted) return;
-            dbData[lastDeleted.node][lastDeleted.id] = lastDeleted.item;
-            saveDataNode(lastDeleted.node, dbData[lastDeleted.node]);
-            document.getElementById('undo-toast').style.display = 'none';
-            lastDeleted = null;
-        }
-
-        function canDelete(itemUser) {
-            if(!currentUser) return false;
-            let currentName = currentUser.email === 'u70657269@peripteros.app' ? 'peri' : currentUser.email.split('@')[0];
-            return currentName === 'peri' || currentName === itemUser;
-        }
-
-        // Render UI
-        function renderAll() {
-            let currentName = currentUser ? (currentUser.email === 'u70657269@peripteros.app' ? 'peri' : currentUser.email.split('@')[0]) : '';
-
-            // Products
-            let pHtml = '';
-            let sortedProd = Object.keys(dbData.products || {}).sort((a,b) => dbData.products[b].name.localeCompare(dbData.products[a].name));
-            for(let id of sortedProd) {
-                let p = dbData.products[id];
-                pHtml += `<div class="card flex-row"><div><strong>${p.name}</strong><br><small style="color:#64748b;">${p.price.toFixed(2)} € (Βάρδια: ${p.user})</small></div><div class="actions">`;
-                if(canDelete(p.user)) {
-                    pHtml += `<button class="icon-btn btn-edit" onclick="editProduct('${id}')">✎</button><button class="icon-btn btn-danger" onclick="deleteItem('products', '${id}')">✕</button>`;
-                }
-                pHtml += `</div></div>`;
-            }
-            document.getElementById('products-list').innerHTML = pHtml;
-
-            // Verese (grouped by client)
-            let clients = {};
-            for(let id in dbData.verese) {
-                let v = dbData.verese[id];
-                if(!clients[v.client]) clients[v.client] = { total: 0, items: [] };
-                clients[v.client].total += v.amount;
-                clients[v.client].items.push({ id, ...v });
-            }
-            let vHtml = '';
-            for(let client in clients) {
-                let cData = clients[client];
-                vHtml += `<div class="card"><div class="flex-row"><h3>${client}</h3><strong style="color:${cData.total >= 0 ? 'var(--danger)' : 'var(--success)'};">${cData.total.toFixed(2)} €</strong></div><hr style="margin:0.5rem 0; border:0; border-top:1px solid var(--border);">`;
-                for(let item of cData.items) {
-                    vHtml += `<div class="flex-row" style="font-size:0.9rem; margin-bottom:0.3rem;"><div><span>${item.amount >= 0 ? '+' : ''}${item.amount.toFixed(2)} €</span> <small style="color:#64748b;">(${item.date} - ${item.user})</small>${item.note ? '<br><em>' + item.note + '</em>' : ''}</div><div class="actions">`;
-                    if(canDelete(item.user)) {
-                        vHtml += `<button class="icon-btn btn-danger" style="font-size:0.9rem;" onclick="deleteItem('verese', '${item.id}')">✕</button>`;
-                    }
-                    vHtml += `</div></div>`;
-                }
-                vHtml += `</div>`;
-            }
-            document.getElementById('verese-list').innerHTML = vHtml;
-
-            // Cash
-            let cHtml = '';
-            let totalCash = 0;
-            let sortedCash = Object.keys(dbData.cash || {}).sort().reverse();
-            for(let id of sortedCash) {
-                let c = dbData.cash[id];
-                totalCash += c.amount;
-                cHtml += `<div class="card flex-row"><div><strong>${c.amount.toFixed(2)} €</strong><br><small style="color:#64748b;">${c.date} (Βάρδια: ${c.user})</small></div><div class="actions">`;
-                if(canDelete(c.user)) {
-                    cHtml += `<button class="icon-btn btn-danger" onclick="deleteItem('cash', '${id}')">✕</button>`;
-                }
-                cHtml += `</div></div>`;
-            }
-            document.getElementById('cash-list').innerHTML = `<div class="card" style="background:#e0f2fe; border-color:#bae6fd;"><strong>Συνολικό Ταμείο: ${totalCash.toFixed(2)} €</strong></div>` + cHtml;
-
-            // Gaps
-            let gHtml = '';
-            for(let id in dbData.gaps) {
-                let g = dbData.gaps[id];
-                gHtml += `<div class="card flex-row" style="${g.bought ? 'opacity:0.5;' : ''}"><div style="display:flex; align-items:center; gap:0.5rem;"><input type="checkbox" ${g.bought ? 'checked' : ''} onchange="toggleGap('${id}')"><span style="${g.bought ? 'text-decoration:line-through;' : ''}">${g.name}</span></div><div class="actions">`;
-                if(canDelete(g.user)) {
-                    gHtml += `<button class="icon-btn btn-danger" onclick="deleteItem('gaps', '${id}')">✕</button>`;
-                }
-                gHtml += `</div></div>`;
-            }
-            document.getElementById('gaps-list').innerHTML = gHtml;
-
-            // Phones
-            let phHtml = '';
-            for(let id in dbData.phones) {
-                let ph = dbData.phones[id];
-                phHtml += `<div class="card flex-row"><div><strong>${ph.name}</strong>: <a href="tel:${ph.num}">${ph.num}</a>${ph.note ? '<br><small>' + ph.note + '</small>' : ''}</div><div class="actions">`;
-                if(canDelete(ph.user)) {
-                    phHtml += `<button class="icon-btn btn-edit" onclick="editPhone('${id}')">✎</button><button class="icon-btn btn-danger" onclick="deleteItem('phones', '${id}')">✕</button>`;
-                }
-                phHtml += `</div></div>`;
-            }
-            document.getElementById('phones-list').innerHTML = phHtml;
-        }
-
-        // Backup Export / Import
-        function exportData() {
-            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dbData));
-            let dlAnchor = document.createElement('a');
-            dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", "peripteros_backup.json");
-            document.body.appendChild(dlAnchor);
-            dlAnchor.click();
-            dlAnchor.remove();
-        }
-
-        function importData(event) {
-            let file = event.target.files[0];
-            if(!file) return;
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    let parsed = JSON.parse(e.target.result);
-                    db.ref('data').set(parsed).then(() => alert('Τα δεδομένα φορτώθηκαν επιτυχώς!'));
-                } catch(err) {
-                    alert('Μη έγκυρο αρχείο JSON');
-                }
-            };
-            reader.readAsText(file);
-        }
-    </script>
+boot();
+</script>
 </body>
 </html>
