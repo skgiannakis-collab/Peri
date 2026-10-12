@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f5c4a">
+<title>Περίπτερο</title>
+<style>
+:root{
+  --bg:#eef1ec;--card:#ffffff;--ink:#1b2421;--mut:#5f6f69;--line:#d3dbd5;
+  --g:#1f5c4a;--onp:#ffffff;--amb:#f2a900;--red:#c4402f;--ok:#2e7d4f;
+  --font:"Trebuchet MS","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#111a17;--card:#1a2521;--ink:#e8efeb;--mut:#93a39c;--line:#2a3933;--g:#58b895;--onp:#0d1613;--red:#e0705f;--ok:#5fc08a}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--font);padding-top:env(safe-area-inset-top,0px)}
+header{position:sticky;top:0;z-index:5;display:flex;gap:12px;align-items:center;justify-content:space-between;
+  background:var(--g);color:var(--onp);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));margin-top:calc(-1*env(safe-area-inset-top,0px))}
+.brand{font-weight:700;font-size:19px;letter-spacing:.2px}
+.who{display:flex;align-items:center;gap:8px;font-size:14px}
+.who input{width:130px;min-height:38px;border:0;border-radius:8px;padding:6px 10px;font:inherit;font-size:16px;background:rgba(255,255,255,.95);color:#1b2421}
+main{max-width:720px;margin:0 auto;padding:12px 12px calc(96px + env(safe-area-inset-bottom,0px))}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;overflow-x:auto;background:var(--card);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px);scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:1 0 auto;min-width:78px;min-height:62px;background:none;border:0;border-top:3px solid transparent;color:var(--mut);font:inherit;font-size:12px;padding:6px 8px;cursor:pointer}
+nav button b{display:block;font-size:22px;line-height:1.2;font-weight:400}
+nav button.on{color:var(--g);border-top-color:var(--amb);font-weight:700}
+h2{margin:0 0 4px;font-size:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid>input:first-child,.grid>button.primary,.grid>.full{grid-column:1/-1}
+input,select,textarea{width:100%;min-height:48px;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+input:focus,button:focus-visible{outline:3px solid var(--amb);outline-offset:1px}
+button{font:inherit;cursor:pointer}
+.primary,.ok,.danger,.ghost,.chip{min-height:48px;border-radius:10px;border:1px solid transparent;padding:8px 14px;font-weight:700}
+.primary{background:var(--g);color:var(--onp)}
+.ok{background:var(--ok);color:#fff}
+.danger{background:none;color:var(--red);border-color:var(--red)}
+.ghost{background:none;color:var(--g);border-color:var(--line)}
+.chip{min-height:40px;background:var(--card);border-color:var(--line);color:var(--ink);font-weight:400}
+.chip.on{background:var(--g);color:var(--onp);border-color:var(--g)}
+.row{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.item .t{font-weight:700;overflow-wrap:anywhere}
+.muted,.by{color:var(--mut);font-size:14px}
+.by{font-weight:400}
+.sm{min-height:44px;min-width:44px;padding:4px 10px;font-size:18px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.big{font-size:34px;font-weight:700}
+.owe{color:var(--red)}
+.pos{color:var(--ok)}
+.badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700;background:var(--line);color:var(--ink)}
+.badge.warn{background:var(--amb);color:#1b2421}
+.badge.bad{background:var(--red);color:#fff}
+.done .t{text-decoration:line-through;color:var(--mut)}
+.empty{text-align:center;color:var(--mut);padding:28px 8px}
+.stock{min-width:118px}
+.stock.out{background:var(--red);color:#fff}
+.stock.in{background:var(--ok);color:#fff}
+#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1b2421;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;max-width:90%}
+#toast.show{opacity:1}
+a{color:var(--g);font-weight:700}
+.sync{font-size:12px;opacity:.9}
+.who button{min-height:38px;border:0;border-radius:8px;padding:6px 12px;background:rgba(255,255,255,.2);color:inherit;font-weight:700}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);color:var(--ink);width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto}
+.sheet p{margin:0 0 14px}
+.fld{display:block;margin-bottom:10px;font-size:14px;color:var(--mut)}
+.fld input{margin-top:4px}
+.inrow{display:flex;gap:8px;align-items:center}
+.inrow .sm{flex:none}
+#toast button{margin-left:10px;background:var(--amb);color:#1b2421;border:0;border-radius:8px;padding:6px 12px;font-weight:700;min-height:36px}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="brand">Περίπτερο</div><div id="sync" class="sync"></div></div>
+  <div id="hdr" class="who"></div>
+</header>
+<main id="main"></main>
+<nav id="nav" aria-label="Ενότητες"></nav>
+<div id="toast" role="status"></div>
+
+<script>
+/* ====== ΡΥΘΜΙΣΕΙΣ: συμπλήρωσε μία φορά (δες README) ====== */
+const FIREBASE_DB_URL  = '';   // π.χ. https://ΟΝΟΜΑ-default-rtdb.europe-west1.firebasedatabase.app
+const FIREBASE_API_KEY = '';   // Firebase → Project settings → Web API Key
+const ADMIN_NAME = 'peri';     // όνομα διαχειριστή (αν το αλλάξεις, άλλαξε και τους κανόνες στο README)
+const SALT = 'peripteros!';    // προστίθεται αθέατα στον κωδικό, επειδή το Firebase θέλει 6+ χαρακτήρες
+/* ======================================================== */
+const DB = FIREBASE_DB_URL.replace(/\/+$/, ''), AUTH = !!(DB && FIREBASE_API_KEY);
+const SKEY = 'peripteros-session';
+let session = null, tok = {id:'', exp:0}, users = null;
+const KEY = 'peripteros-v1';
+const blank = () => ({user:'', products:[], expiry:[], cigs:[], needs:[], cash:[], debtors:[], entries:[], contacts:[]});
+function migrate(s){ s.entries = s.entries || []; s.debtors.forEach(c => { if(Array.isArray(c.entries)){ c.entries.forEach(e => s.entries.push({...e, debtor:c.id})); delete c.entries; } });
+  (s.expiry || []).forEach(e => s.products.push({id:'x' + e.id, name:e.name, exp:e.date, by:e.by})); s.expiry = []; return s; }
+function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStorage.getItem(KEY)) || {})); }catch(e){ return blank(); } }
+let S = load();
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Δεν έγινε αποθήκευση!'); } sync(); }
+
+let tab = 'needs', openDebtor = null, editId = null, q = '', cigFilter = 'all';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const num = v => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? null : n; };
+const eur = n => n == null ? '' : n.toLocaleString('el-GR', {style:'currency', currency:'EUR'});
+const dt = t => new Date(t).toLocaleString('el-GR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+const dd = s => new Date(s + 'T00:00:00').toLocaleDateString('el-GR');
+const who = () => AUTH ? (session ? session.name : '') : S.user.trim();
+const isAdmin = () => !AUTH || (!!session && session.role === 'admin');
+const canDel = x => isAdmin() || (!!x && !!x.by && x.by === who());
+const delBtn = (act, x) => canDel(x) ? `<button class="danger sm" data-act="${act}" data-id="${x.id}" aria-label="Διαγραφή">✕</button>` : '';
+const tag = x => (x.by ? ` <span class="by">– ${esc(x.by)}</span>` : '') + (x.ed && x.ed !== x.by ? ` <span class="by">(επεξ. ${esc(x.ed)})</span>` : '');
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const match = s => !q || norm(s).includes(norm(q));
+const val = (f, n) => (f.get(n) || '').trim();
+const empty = t => `<div class="empty">${t}</div>`;
+let tt;
+function toast(m, act){
+  const el = $('#toast'); el.innerHTML = esc(m) + (act ? ` <button id="tact">${esc(act.label)}</button>` : '');
+  el.style.pointerEvents = act ? 'auto' : 'none'; el.classList.add('show');
+  if(act) $('#tact').onclick = () => { act.fn(); el.classList.remove('show'); };
+  clearTimeout(tt); tt = setTimeout(() => el.classList.remove('show'), act ? 6000 : 1800);
+}
+const mk = html => { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = html; document.body.appendChild(m); return m; };
+function ask(msg, yes = 'Συνέχεια'){
+  return new Promise(res => {
+    const m = mk(`<div class="sheet"><p>${esc(msg)}</p><div class="row"><button class="ghost" data-r="0">Άκυρο</button><button class="danger" data-r="1">${esc(yes)}</button></div></div>`);
+    m.onclick = e => { const b = e.target.closest('[data-r]'); if(b || e.target === m){ m.remove(); res(!!b && b.dataset.r === '1'); } };
+  });
+}
+function formModal(title, fields, vals = {}, okLabel = 'Αποθήκευση'){
+  return new Promise(res => {
+    const m = mk(`<form class="sheet"><h2>${esc(title)}</h2>${fields.map(f => `<label class="fld">${esc(f.label)}<div class="inrow"><input name="${f.name}" type="${f.type || 'text'}" ${f.inputmode ? `inputmode="${f.inputmode}"` : ''} value="${esc(vals[f.name] ?? '')}" ${f.required ? 'required' : ''} autocomplete="off">${f.scan ? '<button type="button" class="chip sm" data-scan aria-label="Σάρωση barcode">📷</button>' : ''}</div></label>`).join('')}
+      <div class="row" style="margin-top:6px"><button type="button" class="ghost" data-cancel>Ακύρωση</button><button class="primary">${esc(okLabel)}</button></div></form>`);
+    const close = v => { m.remove(); res(v); };
+    m.querySelector('form').onsubmit = e => { e.preventDefault(); const o = {}; new FormData(e.target).forEach((v, k) => o[k] = String(v).trim()); close(o); };
+    m.querySelector('[data-cancel]').onclick = () => close(null);
+    m.onclick = e => { if(e.target === m) close(null); };
+    m.querySelectorAll('[data-scan]').forEach(bt => bt.onclick = async () => { const c = await scanBarcode(); if(c) bt.parentElement.querySelector('input').value = c; });
+    const first = m.querySelector('input'); if(first && !first.value) setTimeout(() => first.focus(), 50);
+  });
+}
+const loadScript = src => new Promise((ok, no) => { const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = no; document.head.appendChild(t); });
+function scanBarcode(){
+  return new Promise(async res => {
+    const m = mk(`<div class="sheet"><h2>Σάρωση barcode</h2>
+      <video playsinline muted autoplay style="width:100%;max-height:45vh;border-radius:12px;background:#000"></video>
+      <p class="muted" id="scmsg" style="margin-top:8px">Στόχευσε το barcode με την κάμερα.</p>
+      <form class="inrow"><input name="code" inputmode="numeric" placeholder="ή γράψε / σκάναρε τον κωδικό" autocomplete="off"><button class="primary">OK</button></form>
+      <button class="ghost" data-x style="width:100%;margin-top:10px">Ακύρωση</button></div>`);
+    const video = m.querySelector('video'), msg = m.querySelector('#scmsg');
+    let stop = () => {}, done = false;
+    const finish = v => { if(done) return; done = true; try{ stop(); }catch(e){} m.remove(); res(v || null); };
+    m.querySelector('form').onsubmit = e => { e.preventDefault(); finish(e.target.code.value.trim()); };
+    m.querySelector('[data-x]').onclick = () => finish(null);
+    m.onclick = e => { if(e.target === m) finish(null); };
+    try{
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nocam');
+      if('BarcodeDetector' in window){
+        const det = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+        video.srcObject = stream; await video.play();
+        const iv = setInterval(async () => { try{ const r = await det.detect(video); if(r.length) finish(r[0].rawValue); }catch(e){} }, 250);
+        stop = () => { clearInterval(iv); stream.getTracks().forEach(t => t.stop()); };
+      }else{
+        await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');
+        const reader = new ZXing.BrowserMultiFormatReader();
+        stop = () => reader.reset();
+        reader.decodeFromVideoDevice(null, video, r => { if(r) finish(r.getText()); });
+      }
+    }catch(e){ msg.textContent = 'Η κάμερα δεν ξεκίνησε. Γράψε τον κωδικό ή χρησιμοποίησε scanner.'; }
+  });
+}
+const toLocal = ts => { const d = new Date(ts); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+const editBtn = (act, x) => `<button class="chip sm" data-act="${act}" data-id="${x.id}" aria-label="Επεξεργασία">✎</button>`;
+function delItem(col, id){
+  const i = S[col].findIndex(x => x.id === id); if(i < 0) return;
+  const [it] = S[col].splice(i, 1);
+  save(); render();
+  toast('Διαγράφηκε', {label:'Αναίρεση', fn:() => { S[col].push(it); save(); render(); }});
+}
+
+const TABS = [
+  ['needs','📝','Ελλείψεις'],
+  ['cigs','🚬','Τσιγάρα'],
+  ['cash','💰','Ταμείο'],
+  ['debt','👥','Βερεσέ'],
+  ['prod','📦','Προϊόντα'],
+  ['tel','📞','Τηλέφωνα'],
+  ['backup','⚙️','Ρυθμίσεις'],
+];
+
+/* ---------- Ελλείψεις ---------- */
+function vNeeds(){
+  const open = S.needs.filter(n => !n.done), done = S.needs.filter(n => n.done);
+  const row = n => `<div class="item row ${n.done ? 'done' : ''}">
+    <div><div class="t">${esc(n.text)}${tag(n)}</div></div>
+    <div class="row"><button class="chip" data-act="needDone" data-id="${n.id}">${n.done ? 'Επαναφορά' : 'Παραγγέλθηκε'}</button>
+    ${editBtn('needEdit', n)}${delBtn('needDel', n)}</div></div>`;
+  return `<form data-form="need" class="card"><div class="row"><input name="text" placeholder="Τι τελειώνει;" required autocomplete="off"><button class="primary">Προσθήκη</button></div></form>
+  <div class="tools"><button class="ghost" data-act="needCopy">Αντιγραφή λίστας</button>${done.length && isAdmin() ? '<button class="ghost" data-act="needClear">Καθάρισμα παραγγελμένων</button>' : ''}</div>
+  ${open.length ? open.map(row).join('') : empty('Δεν λείπει τίποτα.')}
+  ${done.length ? `<h2 class="muted" style="font-size:15px;margin-top:16px">Παραγγέλθηκαν</h2>${done.map(row).join('')}` : ''}`;
+}
+
+/* ---------- Τσιγάρα ---------- */
+function cigList(){
+  const l = S.cigs.filter(c => match(c.name) && (cigFilter === 'all' || (cigFilter === 'out') === c.out))
+    .sort((a, b) => (b.out - a.out) || a.name.localeCompare(b.name, 'el'));
+  if(!l.length) return empty('Δεν υπάρχουν τσιγάρα εδώ.');
+  return l.map(c => `<div class="item row"><div><div class="t">${esc(c.name)}</div>${c.by ? `<div class="by">Τελευταία αλλαγή: ${esc(c.by)}</div>` : ''}</div>
+    <div class="row">
+      ${c.out ? `<button class="chip sm" data-act="cigOrder" data-id="${c.id}" title="Στις ελλείψεις">🛒</button>` : ''}
+      <button class="primary stock ${c.out ? 'out' : 'in'}" data-act="cigToggle" data-id="${c.id}">${c.out ? 'Τελείωσε' : 'Υπάρχει'}</button>
+      ${editBtn('cigEdit', c)}${delBtn('cigDel', c)}</div></div>`).join('');
+}
+function vCigs(){
+  const out = S.cigs.filter(c => c.out).length;
+  return `<form data-form="cig" class="card"><div class="row"><input name="name" placeholder="Νέο τσιγάρο (π.χ. Karelia Χρυσή)" required autocomplete="off"><button class="primary">Προσθήκη</button></div></form>
+  <div class="tools">
+    <button class="chip ${cigFilter === 'all' ? 'on' : ''}" data-act="cigF" data-id="all">Όλα (${S.cigs.length})</button>
+    <button class="chip ${cigFilter === 'out' ? 'on' : ''}" data-act="cigF" data-id="out">Τελειωμένα (${out})</button>
+    <button class="chip ${cigFilter === 'in' ? 'on' : ''}" data-act="cigF" data-id="in">Υπάρχουν</button></div>
+  <input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">
+  <div id="list">${cigList()}</div>`;
+}
+
+/* ---------- Ταμείο ---------- */
+function vCash(){
+  const l = [...S.cash].sort((a, b) => b.at - a.at);
+  return `<form data-form="cash" class="card grid">
+    <input class="full" name="amount" inputmode="decimal" placeholder="Ποσό στο ταμείο €" required>
+    <input class="full" name="when" type="datetime-local" aria-label="Ημερομηνία/ώρα (αν μείνει κενό, μπαίνει η τωρινή)">
+    <button class="primary">Καταχώρηση ταμείου</button></form>
+  <p class="muted" style="margin:0 0 10px">Αν αφήσεις κενή την ώρα, μπαίνει αυτόματα η τωρινή.</p>
+  ${l.length ? l.map(c => `<div class="item row"><div class="t">${eur(c.amount)}${tag(c)} <span class="by">– ${dt(c.at)}</span></div>
+    ${editBtn('cashEdit', c)}${delBtn('cashDel', c)}</div>`).join('') : empty('Κανένα ταμείο ακόμα.')}`;
+}
+
+/* ---------- Βερεσέ ---------- */
+const owed = c => S.entries.filter(e => e.debtor === c.id).reduce((s, e) => s + (e.amount || 0), 0);
+function vDebt(){
+  if(openDebtor){
+    const c = S.debtors.find(x => x.id === openDebtor);
+    if(!c){ openDebtor = null; return vDebt(); }
+    const tot = owed(c);
+    const es = S.entries.filter(e => e.debtor === c.id).sort((a, b) => b.at - a.at);
+    return `<button class="ghost" data-act="back" style="margin-bottom:10px">← Όλοι οι πελάτες</button>
+    <div class="card"><div class="row"><h2>${esc(c.name)}</h2>${editBtn('debtorEdit', c)}</div><div class="big ${tot > 0 ? 'owe' : ''}">${eur(tot)}</div><div class="muted">${tot > 0 ? 'οφείλει' : tot < 0 ? 'πιστωτικό υπόλοιπο' : 'δεν οφείλει'}</div></div>
+    <form data-form="debt" class="card grid">
+      <input class="full" name="item" placeholder="Τι πήρε (προαιρετικό)" autocomplete="off">
+      <input class="full" name="amount" inputmode="decimal" placeholder="Ποσό €">
+      <button class="primary" name="kind" value="debt" style="grid-column:auto">+ Χρέωση</button>
+      <button class="ok" name="kind" value="pay">Πλήρωσε</button></form>
+    ${es.length ? es.map(e => `<div class="item row ${e.pay ? '' : ''}"><div>
+      <div class="t">${e.item ? esc(e.item) : (e.pay ? 'Πληρωμή' : 'Χρέωση')}${tag(e)}</div>
+      <div class="by">${dt(e.at)}</div></div>
+      <div class="row">${e.amount != null ? `<b class="${e.pay ? 'pos' : ''}">${e.pay ? '−' : ''}${eur(Math.abs(e.amount))}</b>` : '<span class="muted">χωρίς ποσό</span>'}
+      ${editBtn('entryEdit', e)}${delBtn('entryDel', e)}</div></div>`).join('') : empty('Καμία κίνηση.')}
+    ${isAdmin() ? '<button class="danger" data-act="debtorDel" style="margin-top:12px;width:100%">Διαγραφή πελάτη</button>' : ''}`;
+  }
+  const l = S.debtors.filter(c => match(c.name)).sort((a, b) => owed(b) - owed(a));
+  const grand = S.debtors.reduce((s, c) => s + Math.max(owed(c), 0), 0);
+  return `<form data-form="debtor" class="card"><div class="row"><input name="name" placeholder="Νέος πελάτης (π.χ. Σταύρος)" required autocomplete="off"><button class="primary">Προσθήκη</button></div></form>
+  <div class="card row"><span>Σύνολο όλων που χρωστούν</span><b class="big owe" style="font-size:24px">${eur(grand)}</b></div>
+  <input data-search placeholder="Αναζήτηση πελάτη…" value="${esc(q)}" style="margin-bottom:10px">
+  <div id="list">${l.length ? l.map(c => { const t = owed(c); return `<div class="item row" data-act="openDebtor" data-id="${c.id}" style="cursor:pointer" tabindex="0">
+    <div class="t">${esc(c.name)}</div><b class="${t > 0 ? 'owe' : ''}">${eur(t)}</b></div>`; }).join('') : empty('Κανένας πελάτης ακόμα.')}</div>`;
+}
+
+/* ---------- Προϊόντα (με λήξη, απόθεμα, barcode) ---------- */
+let prodFilter = 'all';
+const PF = [
+  {name:'name', label:'Όνομα προϊόντος', required:1},
+  {name:'barcode', label:'Barcode', scan:1, inputmode:'numeric'},
+  {name:'exp', label:'Ημερομηνία λήξης', type:'date'},
+  {name:'boxes', label:'Απόθεμα σε κούτες', inputmode:'decimal'},
+  {name:'pcs', label:'Απόθεμα σε τεμάχια', inputmode:'decimal'},
+  {name:'cost', label:'Τιμή χονδρικής €', inputmode:'decimal'},
+  {name:'price', label:'Τιμή λιανικής €', inputmode:'decimal'},
+  {name:'supplier', label:'Προμηθευτής'},
+];
+const bnorm = c => { c = String(c || '').trim(); return /^\d+$/.test(c) ? c.replace(/^0+/, '') : c; };
+const findCode = c => c && S.products.find(p => p.barcode && bnorm(p.barcode) === bnorm(c));
+const dleft = d => Math.round((new Date(d + 'T00:00:00') - new Date().setHours(0, 0, 0, 0)) / 864e5);
+const stockOut = p => (p.boxes != null || p.pcs != null) && !p.boxes && !p.pcs;
+function stockBadge(p){
+  if(p.boxes == null && p.pcs == null) return '<span class="badge">Απόθεμα: —</span>';
+  if(stockOut(p)) return '<span class="badge bad">Τέλος</span>';
+  const a = []; if(p.boxes) a.push(p.boxes + (p.boxes == 1 ? ' κούτα' : ' κούτες')); if(p.pcs) a.push(p.pcs + ' τεμ.');
+  return `<span class="badge">${a.join(' + ')}</span>`;
+}
+function expBadge(p){
+  if(!p.exp) return '';
+  const n = dleft(p.exp), cls = n < 0 ? 'bad' : n <= 7 ? 'warn' : '';
+  const t = n < 0 ? `έληξε πριν ${-n} μ.` : n === 0 ? 'λήγει σήμερα' : `σε ${n} μ.`;
+  return `<span class="badge ${cls}">Λήξη ${dd(p.exp)} (${t})</span>`;
+}
+function prodList(){
+  let l = S.products.filter(p => match([p.name, p.supplier, p.barcode].join(' ')));
+  if(prodFilter === 'exp') l = l.filter(p => p.exp && dleft(p.exp) <= 30).sort((a, b) => a.exp.localeCompare(b.exp));
+  else { if(prodFilter === 'out') l = l.filter(stockOut); l.sort((a, b) => a.name.localeCompare(b.name, 'el')); }
+  if(!l.length) return empty('Κανένα προϊόν.');
+  return l.map(p => {
+    const info = [p.cost != null ? 'Χονδρική ' + eur(p.cost) : '', p.price != null ? 'Λιανική ' + eur(p.price) : '',
+      (p.cost != null && p.price != null) ? 'Κέρδος ' + eur(p.price - p.cost) : '', p.supplier ? 'Προμ.: ' + esc(p.supplier) : '', p.barcode ? '#' + esc(p.barcode) : ''].filter(Boolean).join(' • ');
+    return `<div class="item"><div class="row"><div class="t">${esc(p.name)}${tag(p)}</div>
+      <div class="row"><button class="chip sm" data-act="prodRecv" data-id="${p.id}" aria-label="Παραλαβή απόθεματος" title="Παραλαβή">📥</button>${editBtn('prodEdit', p)}${delBtn('prodDel', p)}</div></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${stockBadge(p)}${expBadge(p)}</div>
+      ${info ? `<div class="by" style="margin-top:4px">${info}</div>` : ''}</div>`;
+  }).join('');
+}
+function vProd(){
+  const soon = S.products.filter(p => p.exp && dleft(p.exp) <= 30).length, out = S.products.filter(stockOut).length;
+  const chip = (k, t) => `<button class="chip ${prodFilter === k ? 'on' : ''}" data-act="prodF" data-id="${k}">${t}</button>`;
+  return `<form data-form="prod" class="card"><div class="row"><input name="name" placeholder="Νέο προϊόν (γρήγορη προσθήκη)" required autocomplete="off"><button class="primary">Προσθήκη</button></div></form>
+  <div class="tools"><button class="primary" data-act="scan">📷 Barcode</button><button class="ghost" data-act="prodNew">＋ Αναλυτικά</button></div>
+  <div class="tools">${chip('all', 'Όλα (' + S.products.length + ')')}${chip('exp', 'Λήγουν σύντομα (' + soon + ')')}${chip('out', 'Τέλος (' + out + ')')}</div>
+  <input data-search placeholder="Αναζήτηση: όνομα, προμηθευτής, barcode…" value="${esc(q)}" style="margin-bottom:10px">
+  <div id="list">${prodList()}</div>`;
+}
+function applyProd(p, v){
+  p.name = v.name; p.barcode = v.barcode; p.exp = v.exp; p.supplier = v.supplier;
+  p.boxes = num(v.boxes); p.pcs = num(v.pcs); p.cost = num(v.cost); p.price = num(v.price);
+}
+async function addProductFull(code){
+  const v = await formModal('Νέο προϊόν', PF, code ? {barcode:code} : {}, 'Προσθήκη'); if(!v) return;
+  const p = {id:uid(), by:who()}; applyProd(p, v); S.products.push(p); save(); render(); toast('Προστέθηκε');
+}
+async function receive(id){
+  const p = S.products.find(x => x.id === id); if(!p) return;
+  const v = await formModal('Παραλαβή: ' + p.name, [
+    {name:'boxes', label:'Κούτες που ήρθαν', inputmode:'decimal'},
+    {name:'pcs', label:'Τεμάχια που ήρθαν', inputmode:'decimal'},
+    {name:'exp', label:'Νέα ημερομηνία λήξης (κενό = μένει η ίδια)', type:'date'}], {}, 'Προσθήκη στο απόθεμα');
+  if(!v) return;
+  p.boxes = (p.boxes || 0) + (num(v.boxes) || 0); p.pcs = (p.pcs || 0) + (num(v.pcs) || 0);
+  if(v.exp) p.exp = v.exp;
+  p.ed = who(); save(); render(); toast('Το απόθεμα ενημερώθηκε');
+}
+async function barcodeFlow(){
+  const code = await scanBarcode(); if(!code) return;
+  const p = findCode(code);
+  if(p){ toast('Βρέθηκε: ' + p.name); return receive(p.id); }
+  addProductFull(code);
+}
+async function editItem(kind, id){
+  const col = {need:'needs', cig:'cigs', cash:'cash', debtor:'debtors', entry:'entries', tel:'contacts', prod:'products'}[kind];
+  const x = col && S[col].find(i => i.id === id); if(!x) return;
+  let v;
+  if(kind === 'need'){ v = await formModal('Επεξεργασία', [{name:'text', label:'Τι λείπει', required:1}], {text:x.text}); if(!v) return; x.text = v.text; }
+  if(kind === 'cig'){ v = await formModal('Επεξεργασία', [{name:'name', label:'Τσιγάρο', required:1}], {name:x.name}); if(!v) return; x.name = v.name; }
+  if(kind === 'debtor'){ v = await formModal('Μετονομασία πελάτη', [{name:'name', label:'Όνομα', required:1}], {name:x.name}); if(!v) return; x.name = v.name; }
+  if(kind === 'cash'){
+    v = await formModal('Επεξεργασία ταμείου', [{name:'amount', label:'Ποσό €', inputmode:'decimal', required:1}, {name:'when', label:'Ημερομηνία/ώρα', type:'datetime-local'}], {amount:x.amount, when:toLocal(x.at)});
+    if(!v) return; const a = num(v.amount); if(a == null) return toast('Βάλε ποσό');
+    x.amount = a; if(v.when) x.at = new Date(v.when).getTime();
+  }
+  if(kind === 'entry'){
+    v = await formModal(x.pay ? 'Επεξεργασία πληρωμής' : 'Επεξεργασία χρέωσης', [{name:'item', label:'Τι πήρε'}, {name:'amount', label:'Ποσό €', inputmode:'decimal'}], {item:x.item, amount:x.amount == null ? '' : Math.abs(x.amount)});
+    if(!v) return; const a = num(v.amount);
+    if(x.pay){ if(a == null) return toast('Βάλε ποσό'); x.amount = -Math.abs(a); }
+    else { if(a == null && !v.item) return toast('Βάλε προϊόν ή ποσό'); x.amount = a == null ? null : Math.abs(a); }
+    x.item = v.item;
+  }
+  if(kind === 'tel'){
+    v = await formModal('Επεξεργασία επαφής', [{name:'name', label:'Όνομα', required:1}, {name:'phone', label:'Τηλέφωνο', type:'tel', inputmode:'tel'}, {name:'note', label:'Σημείωση'}], x);
+    if(!v) return; x.name = v.name; x.phone = v.phone; x.note = v.note;
+  }
+  if(kind === 'prod') S.products.push({id:uid(), name:val(f, 'name'), by});
+  if(kind === 'tel'){
+    v = await formModal('Επεξεργασία επαφής', [{name:'name', label:'Όνομα', required:1}, {name:'phone', label:'Τηλέφωνο', type:'tel', inputmode:'tel'}, {name:'note', label:'Σημείωση'}], x);
+    if(!v) return; x.name = v.name; x.phone = v.phone; x.note = v.note;
+  }
+  if(kind === 'prod'){
+    v = await formModal('Επεξεργασία προϊόντος', PF, x); if(!v) return; applyProd(x, v);
+  }
+  x.ed = who(); save(); render(); toast('Αποθηκεύτηκε');
+}
+
+/* ---------- Τηλέφωνα ---------- */
+function vTel(){
+  const l = S.contacts.filter(c => match(c.name + ' ' + (c.note || ''))).sort((a, b) => a.name.localeCompare(b.name, 'el'));
+  return `<form data-form="tel" class="card grid">
+    <input name="name" placeholder="Όνομα (π.χ. Τεχνικός ψυγείων)" required autocomplete="off">
+    <input name="phone" type="tel" inputmode="tel" placeholder="Τηλέφωνο">
+    <input class="full" name="note" placeholder="Σημείωση (προαιρετικό)" autocomplete="off">
+    <button class="primary">Προσθήκη</button></form>
+  <input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">
+  <div id="list">${telList(l)}</div>`;
+}
+function telList(l){
+  if(!l.length) return empty('Καμία επαφή ή σημείωση.');
+  return l.map(c => `<div class="item row"><div><div class="t">${esc(c.name)}</div>
+    ${c.phone ? `<a href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">${esc(c.phone)}</a>` : ''}
+    ${c.note ? `<div class="by">${esc(c.note)}</div>` : ''}</div>
+    ${editBtn('telEdit', c)}${delBtn('telDel', c)}</div>`).join('');
+}
+
+/* ---------- Αντίγραφο ---------- */
+function vBackup(){
+  return accountCard() + (!isAdmin() ? '' : `<div class="card"><h2>Αντίγραφο ασφαλείας</h2>
+    <p class="muted">Τα δεδομένα μένουν σε αυτή τη συσκευή/πρόγραμμα περιήγησης. Κατέβασε αντίγραφο κάθε τόσο.</p>
+    <div class="tools"><button class="primary" data-act="export">Κατέβασμα αντιγράφου</button>
+    <button class="ghost" data-act="import">Φόρτωση αντιγράφου</button></div>
+    <input type="file" id="file" accept="application/json" hidden></div>
+  <div class="card"><h2>Διαγραφή όλων</h2><p class="muted">Σβήνει όλα τα δεδομένα από αυτή τη συσκευή.</p>
+    <button class="danger" data-act="wipe">Διαγραφή όλων των δεδομένων</button></div>`);
+}
+
+const VIEWS = {needs:vNeeds, cigs:vCigs, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
+
+function render(){
+  renderHeader();
+  if(AUTH && !session){ $('#main').innerHTML = loginView(); $('#nav').innerHTML = ''; return; }
+  $('#main').innerHTML = VIEWS[tab]();
+  $('#nav').innerHTML = TABS.map(([k, i, l]) => `<button class="${k === tab ? 'on' : ''}" data-tab="${k}" ${k === tab ? 'aria-current="page"' : ''}><b>${i}</b>${l}</button>`).join('');
+}
+function go(t){ tab = t; q = ''; editId = null; openDebtor = null; if(t === 'backup' && AUTH && session && isAdmin()) loadUsers(); render(); window.scrollTo(0, 0); $('#nav .on')?.scrollIntoView({inline:'center', block:'nearest'}); }
+function toList(){
+  const el = $('#list'); if(!el) return;
+  if(tab === 'cigs') el.innerHTML = cigList();
+  if(tab === 'prod') el.innerHTML = prodList();
+  if(tab === 'tel') el.innerHTML = telList(S.contacts.filter(c => match(c.name + ' ' + (c.note || ''))).sort((a, b) => a.name.localeCompare(b.name, 'el')));
+  if(tab === 'debt') render(), $('[data-search]').focus(), $('[data-search]').setSelectionRange(q.length, q.length);
+}
+
+/* ---------- Φόρμες ---------- */
+document.addEventListener('submit', ev => {
+  const form = ev.target.closest('form[data-form]'); if(!form) return;
+  ev.preventDefault();
+  const f = new FormData(form), kind = form.dataset.form, by = who(), now = Date.now();
+  if(kind === 'login') return doLogin(f);
+  if(kind === 'newuser') return createUser(f);
+  if(kind === 'need') S.needs.unshift({id:uid(), text:val(f, 'text'), by, at:now, done:false});
+  if(kind === 'cig') S.cigs.push({id:uid(), name:val(f, 'name'), out:false, by:''});
+  if(kind === 'cash'){
+    const a = num(f.get('amount')); if(a == null) return toast('Βάλε ποσό');
+    const w = f.get('when'); S.cash.push({id:uid(), amount:a, by, at:w ? new Date(w).getTime() : now});
+  }
+  if(kind === 'debtor') S.debtors.push({id:uid(), name:val(f, 'name')});
+  if(kind === 'debt'){
+    const c = S.debtors.find(x => x.id === openDebtor), pay = ev.submitter?.value === 'pay';
+    let a = num(f.get('amount')), item = val(f, 'item');
+    if(pay && a == null) return toast('Βάλε ποσό πληρωμής');
+    if(!pay && a == null && !item) return toast('Βάλε προϊόν ή ποσό');
+    S.entries.push({id:uid(), debtor:c.id, item, amount:a == null ? null : (pay ? -Math.abs(a) : Math.abs(a)), pay, by, at:now});
+  }
+  if(kind === 'prod'){
+    const d = {name:val(f, 'name'), cost:num(f.get('cost')), price:num(f.get('price')), supplier:val(f, 'supplier')};
+    if(editId){ Object.assign(S.products.find(p => p.id === editId), d); editId = null; }
+    else S.products.push({id:uid(), ...d, by});
+  }
+  if(kind === 'tel') S.contacts.push({id:uid(), name:val(f, 'name'), phone:val(f, 'phone'), note:val(f, 'note')});
+  save(); render(); toast('Αποθηκεύτηκε');
+});
+
+/* ---------- Κλικ ---------- */
+document.addEventListener('click', async ev => {
+  const tb = ev.target.closest('[data-tab]'); if(tb) return go(tb.dataset.tab);
+  const b = ev.target.closest('[data-act]'); if(!b) return;
+  const a = b.dataset.act, id = b.dataset.id;
+  if(a.endsWith('Edit')) return editItem(a.slice(0, -4), id);
+  switch(a){
+    case 'needDone': { const n = S.needs.find(x => x.id === id); n.done = !n.done; break; }
+    case 'needDel': delItem('needs', id); return;
+    case 'needClear': if(!await ask('Να σβηστούν οι παραγγελμένες;')) return; S.needs = S.needs.filter(n => !n.done); break;
+    case 'needCopy': {
+      const t = S.needs.filter(n => !n.done).map(n => '• ' + n.text).join('\n') || 'Δεν λείπει τίποτα';
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Αντιγράφηκε'), () => toast('Δεν έγινε αντιγραφή'));
+      return;
+    }
+    case 'cigToggle': { const c = S.cigs.find(x => x.id === id); c.out = !c.out; c.ed = who(); break; }
+    case 'cigDel': delItem('cigs', id); return;
+    case 'cigF': cigFilter = id; break;
+    case 'cigOrder': { const c = S.cigs.find(x => x.id === id); S.needs.unshift({id:uid(), text:c.name, by:who(), at:Date.now(), done:false}); save(); return toast('Μπήκε στις ελλείψεις'); }
+    case 'cashDel': delItem('cash', id); return;
+    case 'openDebtor': openDebtor = id; q = ''; render(); window.scrollTo(0, 0); return;
+    case 'back': openDebtor = null; break;
+    case 'debtorDel': {
+      if(!await ask('Διαγραφή πελάτη και όλων των κινήσεών του;', 'Διαγραφή')) return;
+      const did = openDebtor; S.entries = S.entries.filter(e => e.debtor !== did);
+      S.debtors = S.debtors.filter(c => c.id !== did); openDebtor = null; break;
+    }
+    case 'entryDel': delItem('entries', id); return;
+    case 'prodDel': delItem('products', id); return;
+    case 'telDel': delItem('contacts', id); return;
+    case 'prodRecv': receive(id); return;
+    case 'prodNew': addProductFull(); return;
+    case 'scan': barcodeFlow(); return;
+    case 'prodF': prodFilter = id; break;
+    case 'logout':
+      if(remote && Object.keys(diff(remote, localMaps())).length && !await ask('Υπάρχουν αλλαγές που δεν έχουν σταλεί ακόμα. Έξοδος παρ’ όλα αυτά;')) return;
+      logout(); return;
+    case 'userDel': if(!await ask('Διαγραφή λογαριασμού; Δεν θα μπορεί πια να μπει.', 'Διαγραφή')) return; deleteUser(id); return;
+    case 'export': {
+      const a2 = document.createElement('a');
+      a2.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], {type:'application/json'}));
+      a2.download = 'peripteros-' + new Date().toISOString().slice(0, 10) + '.json'; a2.click(); return;
+    }
+    case 'import': $('#file').click(); return;
+    case 'wipe':
+      if(!await ask(AUTH ? 'Σίγουρα; Θα σβηστούν ΟΛΑ για ΟΛΕΣ τις συσκευές.' : 'Σίγουρα; Θα σβηστούν ΟΛΑ.', 'Διαγραφή')) return;
+      if(!await ask('Τελευταία ερώτηση: διαγραφή όλων των δεδομένων;', 'Ναι, διαγραφή')) return;
+      S = blank(); break;
+  }
+  save(); render();
+});
+document.addEventListener('keydown', ev => {
+  if((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[data-act="openDebtor"]')){ ev.preventDefault(); ev.target.click(); }
+});
+document.addEventListener('change', async ev => {
+  if(ev.target.id !== 'file') return;
+  const file = ev.target.files[0]; ev.target.value = ''; if(!file) return;
+  if(AUTH && !await ask('Η φόρτωση αντικαθιστά τα κοινά δεδομένα για όλους. Συνέχεια;')) return;
+  const r = new FileReader();
+  r.onload = () => { try{ S = migrate(Object.assign(blank(), JSON.parse(r.result))); save(); render(); toast('Φορτώθηκε'); }catch(e){ toast('Μη έγκυρο αρχείο'); } };
+  r.readAsText(file);
+});
+document.addEventListener('input', ev => {
+  if(ev.target.matches('[data-search]')){ q = ev.target.value; toList(); }
+});
+/* ---------- Λογαριασμοί και συγχρονισμός (Firebase, REST) ---------- */
+const COLS = ['products','cigs','needs','cash','debtors','entries','contacts'];
+let remote = null, syncing = false, again = false, needRender = false, es = null, rp = null;
+const clone = o => JSON.parse(JSON.stringify(o));
+const toMap = arr => Object.fromEntries(arr.map(x => [x.id, x]));
+const fromMap = o => Object.values(o || {});
+const localMaps = () => { const m = {}; COLS.forEach(c => m[c] = toMap(S[c])); return m; };
+const sig = o => JSON.stringify(o, (k, v) => v === null ? undefined : (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v));
+function diff(a, b){
+  const out = {};
+  COLS.forEach(c => {
+    const A = a[c] || {}, B = b[c] || {};
+    for(const id in B) if(sig(A[id]) !== sig(B[id])) out[c + '/' + id] = B[id];
+    for(const id in A) if(!(id in B)) out[c + '/' + id] = null;
+  });
+  return out;
+}
+const typing = () => document.activeElement && document.activeElement.matches && document.activeElement.matches('input');
+
+/* όνομα χρήστη -> εσωτερικό email (δουλεύει και με ελληνικά, τόνους, κεφαλαία) */
+const normName = n => n.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ς/g, 'σ');
+const hex = t => [...new TextEncoder().encode(t)].map(b => b.toString(16).padStart(2, '0')).join('');
+const emailFor = n => 'u' + hex(normName(n)) + '@peripteros.app';
+const isAdminName = n => normName(n) === normName(ADMIN_NAME);
+
+function setStatus(st){
+  const el = $('#sync'); if(!el) return;
+  el.textContent = {off:'Μόνο σε αυτή τη συσκευή', ok:'● Συγχρονισμένο', offline:'● Χωρίς σύνδεση, θα σταλεί αργότερα'}[st] || '';
+}
+function renderHeader(){
+  const h = $('#hdr'); if(!h) return;
+  if(!AUTH){
+    h.innerHTML = '<label>Βάρδια <input id="who" placeholder="Όνομα" autocomplete="off" aria-label="Όνομα βάρδιας"></label>';
+    const i = $('#who'); i.value = S.user; i.addEventListener('input', e => { S.user = e.target.value; save(); });
+  } else if(session){
+    h.innerHTML = `<span>${esc(session.name)}${isAdmin() ? ' (διαχειριστής)' : ''}</span><button data-act="logout">Έξοδος</button>`;
+  } else h.innerHTML = '';
+  if(!AUTH) setStatus('off'); else if(!session) setStatus('');
+}
+function loginView(){
+  return `<form data-form="login" class="card grid" style="margin-top:24px"><h2 class="full" style="margin:0">Είσοδος</h2>
+    <input class="full" name="user" placeholder="Όνομα χρήστη" autocomplete="username" autocapitalize="none" required>
+    <input class="full" name="pass" type="password" placeholder="Κωδικός" autocomplete="current-password" required>
+    <button class="primary">Είσοδος</button></form>`;
+}
+async function idp(ep, body){
+  const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:' + ep + '?key=' + FIREBASE_API_KEY,
+    {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...body, returnSecureToken:true})});
+  return r.json();
+}
+async function refresh(){
+  const r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + FIREBASE_API_KEY, {method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'grant_type=refresh_token&refresh_token=' + encodeURIComponent(session.refreshToken)});
+  const j = await r.json();
+  if(j.error){ logout('Συνδέσου ξανά'); throw new Error('auth'); }
+  tok = {id:j.id_token, exp:Date.now() + (+j.expires_in) * 1000};
+  session.refreshToken = j.refresh_token; saveSession(); stream();
+}
+async function token(){
+  if(!session) throw new Error('auth');
+  if(Date.now() > tok.exp - 60000){ if(!rp) rp = refresh().finally(() => rp = null); await rp; }
+  return tok.id;
+}
+async function api(method, path, body, retry = true){
+  const t = await token();
+  const r = await fetch(DB + path + '?auth=' + encodeURIComponent(t), {method, body: body === undefined ? undefined : JSON.stringify(body)});
+  if(r.status === 401 && retry){ tok.exp = 0; return api(method, path, body, false); }
+  if(r.status === 401){ logout('Δεν έχεις πρόσβαση. Ζήτα από τον διαχειριστή.'); throw new Error('auth'); }
+  if(!r.ok) throw new Error(r.status);
+  return r;
+}
+const saveSession = () => { try{ localStorage.setItem(SKEY, JSON.stringify(session)); }catch(e){} };
+function logout(msg){
+  if(es){ es.close(); es = null; }
+  session = null; tok = {id:'', exp:0}; remote = null; users = null; again = false;
+  localStorage.removeItem(SKEY); localStorage.removeItem(KEY);
+  S = blank(); render(); if(msg) toast(msg);
+}
+async function doLogin(f){
+  const name = (f.get('user') || '').trim(), pw = f.get('pass') || '';
+  if(!name || !pw) return;
+  toast('Σύνδεση…');
+  try{
+    const cred = {email:emailFor(name), password:pw + SALT};
+    let r = await idp('signInWithPassword', cred);
+    if(r.error && isAdminName(name) && /INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND/.test(r.error.message)){
+      const r2 = await idp('signUp', cred);   // πρώτη είσοδος διαχειριστή: δημιουργείται ο λογαριασμός
+      if(!r2.error) r = r2;
+    }
+    if(r.error){
+      if(/OPERATION_NOT_ALLOWED/.test(r.error.message)) return toast('Ενεργοποίησε το Email/Password στο Firebase Authentication');
+      if(/API key/i.test(r.error.message)) return toast('Λάθος API key στο index.html');
+      return toast('Λάθος όνομα ή κωδικός');
+    }
+    tok = {id:r.idToken, exp:Date.now() + (+r.expiresIn) * 1000};
+    session = {uid:r.localId, refreshToken:r.refreshToken, name, role:'user'};
+    let u = await (await api('GET', '/users/' + r.localId + '.json')).json();
+    if(!u){
+      if(!isAdminName(name)){ logout('Ο λογαριασμός δεν έχει πρόσβαση. Ζήτα από τον διαχειριστή.'); return; }
+      u = {name:ADMIN_NAME, role:'admin', created:Date.now()};
+      await api('PUT', '/users/' + r.localId + '.json', u);
+    }
+    session.name = u.name; session.role = u.role === 'admin' ? 'admin' : 'user';
+    saveSession(); tab = 'needs'; render(); stream(); sync();
+  }catch(e){ if(session && e.message !== 'auth') toast('Χωρίς σύνδεση στο internet'); else if(!session && e.message !== 'auth') toast('Χωρίς σύνδεση στο internet'); }
+}
+async function loadUsers(){
+  try{ users = (await (await api('GET', '/users.json')).json()) || {}; if(tab === 'backup' && !typing()) render(); }catch(e){}
+}
+async function createUser(f){
+  const name = (f.get('user') || '').trim(), pw = f.get('pass') || '';
+  if(name.length < 2 || pw.length < 4) return toast('Όνομα 2+ και κωδικός 4+ χαρακτήρες');
+  if(hex(normName(name)).length > 60) return toast('Πολύ μεγάλο όνομα');
+  if(isAdminName(name)) return toast('Αυτό το όνομα είναι του διαχειριστή');
+  try{
+    const cred = {email:emailFor(name), password:pw + SALT};
+    let r = await idp('signUp', cred);
+    if(r.error){
+      if(!/EMAIL_EXISTS/.test(r.error.message)) return toast('Δεν δημιουργήθηκε: ' + r.error.message);
+      r = await idp('signInWithPassword', cred);   // ξαναενεργοποίηση λογαριασμού που είχε διαγραφεί
+      if(r.error) return toast('Το όνομα υπάρχει ήδη με άλλον κωδικό (Firebase → Authentication)');
+    }
+    await api('PUT', '/users/' + r.localId + '.json', {name, role:'user', created:Date.now()});
+    toast('Ο λογαριασμός δημιουργήθηκε'); loadUsers();
+  }catch(e){ if(e.message !== 'auth') toast('Δεν έγινε. Έλεγξε το internet'); }
+}
+async function deleteUser(uid){
+  if(session && uid === session.uid) return;
+  try{ await api('DELETE', '/users/' + uid + '.json'); loadUsers(); toast('Διαγράφηκε'); }catch(e){ toast('Δεν έγινε'); }
+}
+function accountCard(){
+  if(!AUTH) return `<div class="card"><p class="muted" style="margin:0">Λειτουργία χωρίς λογαριασμούς: τα δεδομένα μένουν μόνο σε αυτή τη συσκευή. Για κοινή χρήση δες το README.</p></div>`;
+  let h = `<div class="card row"><div><h2>${esc(session.name)}</h2><div class="muted">${isAdmin() ? 'Διαχειριστής' : 'Χρήστης'}</div></div><button class="ghost" data-act="logout">Έξοδος</button></div>`;
+  if(isAdmin()){
+    const l = Object.entries(users || {}).sort((a, b) => String(a[1].name).localeCompare(String(b[1].name), 'el'));
+    h += `<form data-form="newuser" class="card grid"><h2 class="full" style="margin:0">Νέος λογαριασμός</h2>
+      <input class="full" name="user" placeholder="Όνομα χρήστη" autocomplete="off" autocapitalize="none" required>
+      <input class="full" name="pass" placeholder="Κωδικός (4+ χαρακτήρες)" autocomplete="off" required>
+      <button class="primary">Δημιουργία</button></form>
+      <div class="card"><h2>Λογαριασμοί</h2>${users ? (l.length ? l.map(([id, u]) => `<div class="item row"><div><div class="t">${esc(u.name)}</div><div class="by">${u.role === 'admin' ? 'Διαχειριστής' : 'Χρήστης'}</div></div>
+        ${u.role === 'admin' ? '' : `<button class="danger sm" data-act="userDel" data-id="${esc(id)}" aria-label="Διαγραφή λογαριασμού">✕</button>`}</div>`).join('') : '<div class="muted">Κανένας ακόμα.</div>') : '<div class="muted">Φόρτωση…</div>'}</div>`;
+  }
+  return h;
+}
+
+async function sync(){
+  if(!AUTH || !session) return setStatus(AUTH ? '' : 'off');
+  if(syncing){ again = true; return; }
+  syncing = true;
+  try{
+    do{
+      again = false;
+      if(remote){
+        const snap = localMaps(), d = diff(remote, snap);
+        if(Object.keys(d).length){ await api('PATCH', '/data.json', d); remote = clone(snap); }
+      }
+      const data = (await (await api('GET', '/data.json')).json()) || {}, sm = {};
+      if(!session) break;
+      COLS.forEach(c => sm[c] = data[c] || {});
+      if(!remote){
+        COLS.forEach(c => { const ids = new Set(Object.keys(sm[c])); S[c] = fromMap(sm[c]).concat(S[c].filter(x => !ids.has(x.id))); });
+        remote = sm; needRender = true; again = true; continue;
+      }
+      if(Object.keys(diff(remote, localMaps())).length){ again = true; continue; }
+      if(sig(sm) !== sig(localMaps())){ COLS.forEach(c => S[c] = fromMap(sm[c])); needRender = true; }
+      remote = sm;
+    }while(again);
+    if(session){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} setStatus('ok'); }
+  }catch(e){ setStatus(session ? 'offline' : ''); }
+  finally{ syncing = false; }
+  if(needRender && !typing()){ needRender = false; render(); }
+}
+function stream(){
+  if(es){ es.close(); es = null; }
+  if(!AUTH || !session || !tok.id || !window.EventSource) return;
+  es = new EventSource(DB + '/data.json?auth=' + encodeURIComponent(tok.id));
+  ['put', 'patch'].forEach(t => es.addEventListener(t, () => sync()));
+  es.addEventListener('auth_revoked', () => { tok.exp = 0; sync(); });
+}
+function boot(){
+  if(AUTH){ try{ session = JSON.parse(localStorage.getItem(SKEY)); }catch(e){} if(!session) S = blank(); }
+  render();
+  if(AUTH && session){ setStatus('offline'); sync(); }
+}
+setInterval(sync, 60000);
+addEventListener('online', sync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) sync(); });
+
+boot();
+</script>
+</body>
+</html>
