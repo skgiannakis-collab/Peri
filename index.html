@@ -195,11 +195,13 @@ const TABS = [
   ['cash','💰','Ταμείο'],
   ['recv','🚚','Παραλαβές'],
   ['needs','📝','Ελλείψεις'],
-  ['tel','📞','Τηλέφωνα'],
-  ['sup','🏭','Προμηθευτές'],
-  ['exp','🧾','Έξοδα'],
-  ['backup','⚙️','Ρυθμίσεις'],
+  ['menu','☰','Μενού'],
 ];
+const MENU = [['z','🧮','Ζ ημέρας'], ['sup','🏭','Προμηθευτές'], ['exp','🧾','Έξοδα'], ['tel','📞','Τηλέφωνα'], ['backup','⚙️','Ρυθμίσεις']];
+const cur = () => MENU.some(m => m[0] === tab) ? 'menu' : tab;
+function vMenu(){
+  return `<h2 style="margin-bottom:10px">Μενού</h2>` + MENU.filter(m => m[0] !== 'exp' || isAdmin()).map(([k, i, l]) => `<button class="item row" data-tab="${k}" style="width:100%;min-height:56px;color:var(--ink);cursor:pointer;text-align:left"><span class="t">${i} ${l}</span><span class="muted">›</span></button>`).join('');
+}
 
 /* ---------- Ελλείψεις ---------- */
 function vNeeds(){
@@ -212,20 +214,18 @@ function vNeeds(){
 }
 
 /* ---------- Ταμείο ---------- */
-function vCash(){
-  return `<div class="tools">${[['count', 'Καταμέτρηση ταμείου'], ['z', 'Ζ ημέρας']].map(([k, l]) => `<button class="chip ${cashView === k ? 'on' : ''}" data-act="cview" data-id="${k}">${l}</button>`).join('')}</div>` + (cashView === 'count' ? vCount() : vZ());
-}
+function vCash(){ return vCount(); }
 function vZ(){
   const l = [...S.zs].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.at - a.at);
   return `<form data-form="z" class="card grid">
     <input class="full" name="date" type="date" value="${today()}" required aria-label="Ημερομηνία Ζ">
-    <input class="full" name="z" inputmode="decimal" placeholder="Ζ ταμειακής € (σύνολο πωλήσεων)" required autocomplete="off">
-    <input class="full" name="pos" inputmode="decimal" placeholder="Ζ POS € (πληρωμές με κάρτα)" autocomplete="off">
+    <input class="full" name="z" inputmode="decimal" placeholder="Ζ ταμειακής €" required autocomplete="off">
+    <input class="full" name="pos" inputmode="decimal" placeholder="Ζ POS €" autocomplete="off">
     <button class="primary">Καταχώρηση Ζ</button></form>
-  <p class="muted" style="margin:0 0 10px">Τα μετρητά της ημέρας υπολογίζονται ως Ζ ταμειακής − Ζ POS.</p>
-  ${l.length ? l.map(z => { const c = (z.z || 0) - (z.pos || 0); return `<div class="item row"><div><div class="t">${dd(z.date)}${tag(z)}</div>
-    <div class="by">Μετρητά <span class="${c < 0 ? 'owe' : ''}">${eur(c)}</span> · POS ${eur(z.pos || 0)}</div></div>
-    <div class="row"><b class="price">${eur(z.z)}</b>${editBtn('zEdit', z)}${delBtn('zDel', z)}</div></div>`; }).join('') : empty('Κανένα Ζ ακόμα.')}`;
+  <p class="muted" style="margin:0 0 10px">Έσοδα ημέρας = Ζ ταμειακής + Ζ POS.</p>
+  ${l.length ? l.map(z => `<div class="item row"><div><div class="t">${dd(z.date)}${tag(z)}</div>
+    <div class="by">Ταμειακή ${eur(z.z)} · POS ${eur(z.pos || 0)}</div></div>
+    <div class="row"><b class="price pos">${eur((z.z || 0) + (z.pos || 0))}</b>${editBtn('zEdit', z)}${delBtn('zDel', z)}</div></div>`).join('') : empty('Κανένα Ζ ακόμα.')}`;
 }
 function vCount(){
   const l = [...S.cash].sort((a, b) => b.at - a.at);
@@ -297,9 +297,9 @@ function vHome(){
   const taskRow = x => `<div class="item row"><div><div class="t">${esc(x.text)}${tag(x)}</div><div class="by">${x.date < t ? '<span class="badge bad">εκπρόθεσμη</span> ' : ''}${dd(x.date)}</div></div><div class="row"><button class="ok sm" data-act="taskDone" data-id="${x.id}" aria-label="Έγινε">✓</button>${delBtn('taskDel', x)}</div></div>`;
   const late = r => r.age > OVERDUE_DAYS ? `<span class="badge bad">${r.age} ημ.</span>` : r.age ? `<span class="by">${r.age} ημ.</span>` : '';
   let h = '';
-  if(isAdmin()) h += card('Τζίρος', `<div class="big">${zt.length ? eur(tz) : '—'}</div><div class="muted">${zt.length ? `σήμερα · μετρητά ${eur(tz - tp)} · POS ${eur(tp)}` : 'Δεν έχει καταχωρηθεί Ζ σήμερα'}</div>
-    <div class="sum" style="margin-top:8px"><span>Τελευταίο Ζ${lz ? ' (' + dd(lz.date) + ')' : ''}</span><b>${lz ? eur(lz.z) : '—'}</b></div>
-    <div class="sum" style="border:0"><span>Τελευταία καταμέτρηση${lc ? ' (' + dt(lc.at) + ')' : ''}</span><b>${lc ? eur(lc.amount) : '—'}</b></div>`, ['cash', 'Ταμείο']);
+  if(isAdmin()) h += card('Τζίρος', `<div class="big">${zt.length ? eur(tz + tp) : '—'}</div><div class="muted">${zt.length ? `σήμερα · ταμειακή ${eur(tz)} · POS ${eur(tp)}` : 'Δεν έχει καταχωρηθεί Ζ σήμερα'}</div>
+    <div class="sum" style="margin-top:8px"><span>Τελευταίο Ζ${lz ? ' (' + dd(lz.date) + ')' : ''}</span><b>${lz ? eur((lz.z || 0) + (lz.pos || 0)) : '—'}</b></div>
+    <div class="sum" style="border:0"><span>Τελευταία καταμέτρηση${lc ? ' (' + dt(lc.at) + ')' : ''}</span><b>${lc ? eur(lc.amount) : '—'}</b></div>`, ['z', 'Ζ ημέρας']);
   h += card('Εργασίες σήμερα', `<form data-form="task" class="grid" style="margin-bottom:8px"><input class="full" name="text" placeholder="Νέα εργασία" required autocomplete="off"><input class="full" name="date" type="date" value="${t}" required aria-label="Ημερομηνία"><button class="primary">Προσθήκη</button></form>
     ${deliv.map(x => `<div class="item row" data-act="hsup" data-id="${x.id}" style="cursor:pointer" tabindex="0"><div class="t">🚚 Παράδοση σήμερα: ${esc(x.name)}</div></div>`).join('')}
     ${due.length ? due.map(taskRow).join('') : (deliv.length ? '' : empty('Καμία εργασία για σήμερα.'))}
@@ -387,14 +387,14 @@ function reportCard(){
   const start = {day:t, month:t.slice(0, 7) + '-01', year:t.slice(0, 4) + '-01-01', all:''}[repPeriod];
   const inP = d => !start || (d || '') >= start;
   const zs = S.zs.filter(z => inP(z.date));
-  const sp = S.receipts.filter(r => r.supplier && inP(r.date)).concat(S.spay.filter(p => inP(p.date)));
+  const sp = S.receipts.filter(r => inP(r.date)).concat(S.spay.filter(p => inP(p.date)));
   const ex = S.expenses.filter(e => inP(e.date));
   const sum = (l, f) => l.reduce((x, e) => x + (f(e) || 0), 0);
-  const Z = sum(zs, z => z.z), P = sum(zs, z => z.pos), C = Z - P;
-  const SP = sum(sp, e => e.amount), X = sum(ex, e => e.amount), E = SP + X, D = Z - E;
+  const Z = sum(zs, z => z.z), P = sum(zs, z => z.pos), C = Z, I = Z + P;
+  const SP = sum(sp, e => e.amount), X = sum(ex, e => e.amount), E = SP + X, D = I - E;
   const out = k => sum(sp.concat(ex).filter(e => srcOf(e) === k), e => e.amount);
   const months = {}, mo = k => months[k] = months[k] || {i:0, e:0};
-  zs.forEach(z => { if(z.date) mo(z.date.slice(0, 7)).i += z.z || 0; });
+  zs.forEach(z => { if(z.date) mo(z.date.slice(0, 7)).i += (z.z || 0) + (z.pos || 0); });
   sp.concat(ex).forEach(e => { if(e.date) mo(e.date.slice(0, 7)).e += e.amount || 0; });
   const mk2 = Object.keys(months).sort().reverse();
   const cats = {}; ex.forEach(e => cats[e.cat] = (cats[e.cat] || 0) + (e.amount || 0));
@@ -402,18 +402,18 @@ function reportCard(){
   const row = (l, v, cls = '', sub = false) => `<div class="sum"${sub ? ' style="padding-left:14px"' : ''}><span class="${sub ? 'by' : ''}">${l}</span><b class="${cls}">${eur(v)}</b></div>`;
   return `<div class="card"><h2>Έσοδα / Έξοδα</h2>
     <div class="tools" style="margin-top:8px">${[['day', 'Σήμερα'], ['month', 'Μήνας'], ['year', 'Έτος'], ['all', 'Όλα']].map(([k, l]) => `<button class="chip ${repPeriod === k ? 'on' : ''}" data-act="rep" data-id="${k}">${l}</button>`).join('')}</div>
-    ${row(`Έσοδα (Ζ ταμειακής, ${zs.length})`, Z, 'pos')}
-    ${row('από μετρητά', C, '', true)}${row('από κάρτα (POS)', P, '', true)}
+    ${row(`Έσοδα (Ζ, ${zs.length})`, I, 'pos')}
+    ${row('Ζ ταμειακής', C, '', true)}${row('Ζ POS', P, '', true)}
     ${row('Έξοδα', E, 'owe')}
-    ${row('πληρωμές προμηθευτών', SP, '', true)}${row('έξοδα (μισθοί, ΔΕΗ…)', X, '', true)}
+    ${row('παραλαβές & πληρωμές προμηθευτών', SP, '', true)}${row('έξοδα (μισθοί, ΔΕΗ…)', X, '', true)}
     ${row('<b>Διαφορά</b>', D, D >= 0 ? 'pos' : 'owe')}
     <h2 class="muted" style="font-size:15px;margin:12px 0 4px">Ανά πηγή</h2>
-    ${row('Ταμείο: μετρητά − πληρωμές', C - out('cash'), C - out('cash') >= 0 ? 'pos' : 'owe')}
-    ${row('Τράπεζα: POS − πληρωμές', P - out('bank'), P - out('bank') >= 0 ? 'pos' : 'owe')}
+    ${row('Ταμειακή − πληρωμές από ταμείο', C - out('cash'), C - out('cash') >= 0 ? 'pos' : 'owe')}
+    ${row('POS − πληρωμές από τράπεζα', P - out('bank'), P - out('bank') >= 0 ? 'pos' : 'owe')}
     ${cl.length ? `<h2 class="muted" style="font-size:15px;margin:12px 0 4px">Έξοδα ανά κατηγορία</h2>` + cl.map(([k, v]) => row(esc(k), v)).join('') : ''}
     ${mk2.length > 1 ? `<h2 class="muted" style="font-size:15px;margin:12px 0 4px">Ανά μήνα</h2>` + mk2.map(k => { const m = months[k];
       return `<div class="sum"><span>${new Date(k + '-01T00:00:00').toLocaleDateString('el-GR', {month:'long', year:'numeric'})}</span><span class="by">${eur(m.i)} − ${eur(m.e)} = <b class="${m.i - m.e >= 0 ? 'pos' : 'owe'}">${eur(m.i - m.e)}</b></span></div>`; }).join('') : ''}
-    <p class="muted" style="margin:10px 0 0">Έσοδα = Ζ ταμειακής (μαζί με POS). Έξοδα = πληρωμές προς προμηθευτές (καρτέλα πληρωμών και «πλήρωσα τώρα» σε παραλαβή με προμηθευτή) + καρτέλα Έξοδα.</p></div>`;
+    <p class="muted" style="margin:10px 0 0">Έσοδα = Ζ ταμειακής + Ζ POS. Έξοδα = παραλαβές (ποσό που πλήρωσες) + πληρωμές προμηθευτών + καρτέλα Έξοδα.</p></div>`;
 }
 
 /* ---------- Προϊόντα (όνομα, τιμή, ετικέτες) ---------- */
@@ -513,13 +513,13 @@ function vBackup(){
     <button class="danger" data-act="wipe">Διαγραφή όλων των δεδομένων</button></div>`);
 }
 
-const VIEWS = {home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
+const VIEWS = {menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
 
 function render(){
   renderHeader();
   if(AUTH && !session){ $('#main').innerHTML = loginView(); $('#nav').innerHTML = ''; return; }
-  $('#main').innerHTML = VIEWS[tab]();
-  $('#nav').innerHTML = TABS.filter(t => t[0] !== 'exp' || isAdmin()).map(([k, i, l]) => `<button class="${k === tab ? 'on' : ''}" data-tab="${k}" ${k === tab ? 'aria-current="page"' : ''}><b>${i}</b>${l}</button>`).join('');
+  $('#main').innerHTML = (MENU.some(m => m[0] === tab) ? '<button class="ghost" data-tab="menu" style="margin-bottom:10px">← Μενού</button>' : '') + VIEWS[tab]();
+  $('#nav').innerHTML = TABS.map(([k, i, l]) => `<button class="${k === cur() ? 'on' : ''}" data-tab="${k}" ${k === cur() ? 'aria-current="page"' : ''}><b>${i}</b>${l}</button>`).join('');
 }
 function go(t){ tab = t; q = ''; ptag = ''; openSup = null; editId = null; openDebtor = null; if(t === 'backup' && AUTH && session && isAdmin()) loadUsers(); render(); window.scrollTo(0, 0); $('#nav .on')?.scrollIntoView({inline:'center', block:'nearest'}); }
 function toList(){
