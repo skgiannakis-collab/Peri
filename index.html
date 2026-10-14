@@ -111,7 +111,7 @@ function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStor
 let S = load();
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Δεν έγινε αποθήκευση!'); } sync(); }
 
-let tab = 'home', hideAmts = false, needsView = 'list', openDebtor = null, editId = null, q = '', ptag = '', repPeriod = 'month', cashView = 'count';
+let tab = 'home', hideAmts = false, tagsAll = false, needsView = 'list', openDebtor = null, editId = null, q = '', ptag = '', repPeriod = 'month', cashView = 'count';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -149,7 +149,7 @@ const srcOpts = [['cash', 'Πληρώθηκε από το ταμείο (μετρ
 const srcSelect = () => `<select class="full" name="src" aria-label="Πηγή πληρωμής">${srcOpts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`;
 const EXPCATS = ['Μισθοί', 'ΔΕΗ', 'ΟΤΕ / Internet', 'Νερό', 'Ενοίκιο', 'Φόροι / Ασφαλιστικά', 'Λογιστής', 'Άλλο'];
 const supName = id => (S.suppliers.find(x => x.id === id) || {}).name || '';
-const supSelect = () => `<select class="full" name="supplier" aria-label="Προμηθευτής"><option value="">— Προμηθευτής (προαιρετικό) —</option>${S.suppliers.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select>`;
+const supSelect = req => `<select class="full" name="supplier" aria-label="Προμηθευτής" ${req ? 'required' : ''}><option value="">${req ? '— Διάλεξε προμηθευτή —' : '— Προμηθευτής (προαιρετικό) —'}</option>${S.suppliers.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select>`;
 const supOpts = () => [['', '— χωρίς προμηθευτή —'], ...S.suppliers.map(x => [x.id, x.name])];
 const supBal = id => S.receipts.filter(r => r.supplier === id).reduce((t, r) => t + ((r.total ?? r.amount) || 0) - (r.amount || 0), 0) - S.spay.filter(p => p.supplier === id).reduce((t, p) => t + (p.amount || 0), 0);
 const DAYS = ['κυρ', 'δευ', 'τρι', 'τετ', 'πεμ', 'παρ', 'σαβ'], DAYN = ['Κυριακή', 'Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο'];
@@ -209,10 +209,10 @@ const TABS = [
   ['needs','📝','Ελλείψεις'],
   ['menu','☰','Μενού'],
 ];
-const MENU = [['z','🧮','Ζ ημέρας'], ['sup','🏭','Προμηθευτές'], ['exp','🧾','Έξοδα'], ['tel','📞','Τηλέφωνα'], ['backup','⚙️','Ρυθμίσεις']];
+const MENU = [['z','🧮','Ζ ημέρας'], ['exp','🧾','Έξοδα'], ['fin','📊','Οικονομική εικόνα'], ['sup','🏭','Προμηθευτές'], ['tel','📞','Τηλέφωνα'], ['backup','⚙️','Ρυθμίσεις']];
 const cur = () => MENU.some(m => m[0] === tab) ? 'menu' : tab;
 function vMenu(){
-  return `<h2 style="margin-bottom:10px">Μενού</h2>` + MENU.filter(m => m[0] !== 'exp' || isAdmin()).map(([k, i, l]) => `<button class="item row" data-tab="${k}" style="width:100%;min-height:56px;color:var(--ink);cursor:pointer;text-align:left"><span class="t">${i} ${l}</span><span class="muted">›</span></button>`).join('');
+  return `<h2 style="margin-bottom:10px">Μενού</h2>` + MENU.filter(m => !['exp', 'fin'].includes(m[0]) || isAdmin()).map(([k, i, l]) => `<button class="item row" data-tab="${k}" style="width:100%;min-height:56px;color:var(--ink);cursor:pointer;text-align:left"><span class="t">${i} ${l}</span><span class="muted">›</span></button>`).join('');
 }
 
 /* ---------- Ελλείψεις ---------- */
@@ -337,15 +337,15 @@ function vHome(){
 
 /* ---------- Προμηθευτές ---------- */
 function recvForm(sid){
-  return `<form data-form="recv" class="card grid">
-    <input class="full" name="name" placeholder="Όνομα παραλαβής / αρ. τιμολογίου" required autocomplete="off">
-    ${sid ? `<input type="hidden" name="supplier" value="${esc(sid)}">` : supSelect()}
+  return (!sid && !S.suppliers.length ? '<p class="muted">Πρόσθεσε πρώτα προμηθευτή (☰ Μενού → Προμηθευτές).</p>' : '') + `<form data-form="recv" class="card grid">
+    <input class="full" name="name" placeholder="Όνομα παραλαβής / αρ. τιμολογίου (προαιρετικό)" autocomplete="off">
+    ${sid ? `<input type="hidden" name="supplier" value="${esc(sid)}">` : supSelect(true)}
     <input class="full" name="date" type="date" value="${today()}" required aria-label="Ημερομηνία">
-    <input name="total" inputmode="decimal" placeholder="Αξία τιμολογίου €" autocomplete="off">
+    <input name="total" inputmode="decimal" placeholder="Αξία τιμολογίου €" required autocomplete="off">
     <input name="amount" inputmode="decimal" placeholder="Πλήρωσα τώρα €" required autocomplete="off">
     ${srcSelect()}<button class="primary">Καταχώρηση παραλαβής</button></form>`;
 }
-const recvRow = r => `<div class="item row"><div><div class="t">${esc(r.name)}${tag(r)}</div><div class="by">${r.supplier ? esc(supName(r.supplier)) + ' · ' : ''}${srcLabel(srcOf(r))}${r.total != null && r.total !== r.amount ? ' · αξία ' + eur(r.total) : ''}</div></div>
+const recvRow = r => `<div class="item row"><div><div class="t">${esc(r.name || supName(r.supplier) || 'Παραλαβή')}${tag(r)}</div><div class="by">${r.supplier ? esc(supName(r.supplier)) + ' · ' : ''}${srcLabel(srcOf(r))}${r.total != null && r.total !== r.amount ? ' · αξία ' + eur(r.total) : ''}</div></div>
   <div class="row"><b class="price">${eur(r.amount)}</b>${editBtn('recvEdit', r)}${delBtn('recvDel', r)}</div></div>`;
 function vRecv(){
   const groups = {};
@@ -407,6 +407,7 @@ function vExp(){
 }
 
 /* ---------- Έσοδα / Έξοδα ---------- */
+function vFin(){ return isAdmin() ? reportCard() : empty('Μόνο για τον διαχειριστή.'); }
 function reportCard(){
   const t = today();
   const start = {day:t, month:t.slice(0, 7) + '-01', year:t.slice(0, 4) + '-01-01', all:''}[repPeriod];
@@ -425,7 +426,7 @@ function reportCard(){
   const cats = {}; ex.forEach(e => cats[e.cat] = (cats[e.cat] || 0) + (e.amount || 0));
   const cl = Object.entries(cats).sort((a, b) => b[1] - a[1]);
   const row = (l, v, cls = '', sub = false) => `<div class="sum"${sub ? ' style="padding-left:14px"' : ''}><span class="${sub ? 'by' : ''}">${l}</span><b class="${cls}">${eur(v)}</b></div>`;
-  return `<div class="card"><h2>Έσοδα / Έξοδα</h2>
+  return `<div class="card"><h2>Οικονομική εικόνα</h2>
     <div class="tools" style="margin-top:8px">${[['day', 'Σήμερα'], ['month', 'Μήνας'], ['year', 'Έτος'], ['all', 'Όλα']].map(([k, l]) => `<button class="chip ${repPeriod === k ? 'on' : ''}" data-act="rep" data-id="${k}">${l}</button>`).join('')}</div>
     ${row(`Έσοδα (Ζ, ${zs.length})`, I, 'pos')}
     ${row('Ζ ταμειακής', C, '', true)}${row('Ζ POS', P, '', true)}
@@ -453,13 +454,8 @@ function vProd(){
   const cnt = {};
   S.products.forEach(p => tagsOf(p).forEach(t => { const k = norm(t); (cnt[k] = cnt[k] || {label:t, n:0}).n++; }));
   const all = Object.entries(cnt).sort((a, b) => a[1].label.localeCompare(b[1].label, 'el'));
-  return `<form data-form="prod" class="card grid">
-    <input class="full" name="name" placeholder="Όνομα προϊόντος" required autocomplete="off">
-    <input class="full" name="price" inputmode="decimal" placeholder="Τιμή €" autocomplete="off">
-    <input class="full" name="tags" placeholder="Ετικέτες: διάλεξε ή γράψε (π.χ. ποτά, αναψυκτικά)" autocomplete="off">
-    ${tagChips('')}
-    <button class="primary">Προσθήκη</button></form>
-  ${all.length ? `<div class="tags"><button class="chip tg ${!ptag ? 'on' : ''}" data-act="ptag" data-id="">Όλα</button>${all.map(([k, v]) => `<button class="chip tg ${ptag === k ? 'on' : ''}" data-act="ptag" data-id="${esc(k)}">${esc(v.label)} (${v.n})</button>`).join('')}</div>` : ''}
+  return `<button class="primary" data-act="prodNew" style="width:100%;margin-bottom:10px">＋ Προσθήκη νέου προϊόντος</button>
+  ${all.length ? `<div class="tags"><button class="chip tg ${!ptag ? 'on' : ''}" data-act="ptag" data-id="">Όλα</button><button class="chip tg" data-act="tagmore">${tagsAll ? 'Εμφάνιση λιγότερων' : 'Εμφάνιση περισσότερων'}</button>${all.filter(([k]) => tagsAll || k === ptag).map(([k, v]) => `<button class="chip tg ${ptag === k ? 'on' : ''}" data-act="ptag" data-id="${esc(k)}">${esc(v.label)} (${v.n})</button>`).join('')}</div>` : ''}
   <input data-search placeholder="Αναζήτηση (όνομα ή ετικέτα)…" value="${esc(q)}" style="margin-bottom:10px">
   <div id="list">${prodList()}</div>`;
 }
@@ -468,7 +464,7 @@ async function editItem(kind, id){
   const x = col && S[col].find(i => i.id === id); if(!x) return;
   let v;
   if(kind === 'need'){ v = await formModal('Επεξεργασία', [{name:'text', label:'Τι λείπει', required:1}, {name:'supplier', label:'Προμηθευτής', options:supOpts()}], {text:x.text, supplier:x.supplier || ''}); if(!v) return; x.text = v.text; x.supplier = v.supplier || null; }
-  if(kind === 'debtor'){ v = await formModal('Μετονομασία πελάτη', [{name:'name', label:'Όνομα', required:1}], {name:x.name}); if(!v) return; x.name = v.name; }
+  if(kind === 'debtor'){ v = await formModal('Μετονομασία πελάτη', [{name:'name', label:'Όνομα', required:1}], {name:x.name}); if(!v) return; if(S.debtors.some(c => c.id !== x.id && norm(c.name) === norm(v.name))) return toast('Υπάρχει ήδη πελάτης με αυτό το όνομα'); x.name = v.name; }
   if(kind === 'cash'){
     v = await formModal('Επεξεργασία ταμείου', [{name:'amount', label:'Ποσό €', inputmode:'decimal', required:1}, {name:'when', label:'Ημερομηνία/ώρα', type:'datetime-local'}], {amount:x.amount, when:toLocal(x.at)});
     if(!v) return; const a = num(v.amount); if(a == null) return toast('Βάλε ποσό');
@@ -490,9 +486,9 @@ async function editItem(kind, id){
     if(!v) return; x.name = v.name; x.price = num(v.price); x.tags = normTags(v.tags);
   }
   if(kind === 'recv'){
-    v = await formModal('Επεξεργασία παραλαβής', [{name:'name', label:'Όνομα παραλαβής', required:1}, {name:'supplier', label:'Προμηθευτής', options:supOpts()}, {name:'date', label:'Ημερομηνία', type:'date', required:1}, {name:'total', label:'Αξία τιμολογίου € (αν διαφέρει)', inputmode:'decimal'}, {name:'amount', label:'Ποσό που πλήρωσα €', inputmode:'decimal', required:1}, {name:'src', label:'Πληρώθηκε από', options:srcOpts}], {name:x.name, supplier:x.supplier || '', date:x.date, total:x.total ?? '', amount:x.amount, src:srcOf(x)});
+    v = await formModal('Επεξεργασία παραλαβής', [{name:'name', label:'Όνομα παραλαβής / τιμολόγιο (προαιρετικό)'}, {name:'supplier', label:'Προμηθευτής', options:supOpts()}, {name:'date', label:'Ημερομηνία', type:'date', required:1}, {name:'total', label:'Αξία τιμολογίου €', inputmode:'decimal', required:1}, {name:'amount', label:'Ποσό που πλήρωσα €', inputmode:'decimal', required:1}, {name:'src', label:'Πληρώθηκε από', options:srcOpts}], {name:x.name, supplier:x.supplier || '', date:x.date, total:x.total ?? x.amount, amount:x.amount, src:srcOf(x)});
     if(!v) return; const a = num(v.amount); if(a == null) return toast('Βάλε ποσό');
-    x.name = v.name; x.supplier = v.supplier || null; x.total = num(v.total); x.date = v.date || x.date; x.amount = a; x.src = v.src === 'bank' ? 'bank' : 'cash';
+    if(!v.supplier) return toast('Διάλεξε προμηθευτή'); const t = num(v.total); if(t == null) return toast('Βάλε αξία τιμολογίου'); x.name = v.name; x.supplier = v.supplier; x.total = t; x.date = v.date || x.date; x.amount = a; x.src = v.src === 'bank' ? 'bank' : 'cash';
   }
   if(kind === 'sup'){ v = await formModal('Επεξεργασία προμηθευτή', [{name:'name', label:'Όνομα', required:1}, {name:'phone', label:'Τηλέφωνο', type:'tel', inputmode:'tel'}, {name:'days', label:'Ημέρες παράδοσης (π.χ. Δευ, Πεμ)'}], x); if(!v) return; x.name = v.name; x.phone = v.phone; x.days = v.days; }
   if(kind === 'sprice'){ v = await formModal('Επεξεργασία τιμής', [{name:'name', label:'Προϊόν', required:1}, {name:'price', label:'Τιμή €', inputmode:'decimal'}], {name:x.name, price:x.price ?? ''}); if(!v) return; x.name = v.name; x.price = num(v.price); }
@@ -530,7 +526,7 @@ function telList(l){
 
 /* ---------- Αντίγραφο ---------- */
 function vBackup(){
-  return accountCard() + (!isAdmin() ? '' : reportCard() + `<div class="card"><h2>Αντίγραφο ασφαλείας</h2>
+  return accountCard() + (!isAdmin() ? '' : `<div class="card"><h2>Αντίγραφο ασφαλείας</h2>
     <p class="muted">Τα δεδομένα μένουν σε αυτή τη συσκευή/πρόγραμμα περιήγησης. Κατέβασε αντίγραφο κάθε τόσο.</p>
     <div class="tools"><button class="primary" data-act="export">Κατέβασμα αντιγράφου</button>
     <button class="ghost" data-act="import">Φόρτωση αντιγράφου</button></div>
@@ -539,7 +535,7 @@ function vBackup(){
     <button class="danger" data-act="wipe">Διαγραφή όλων των δεδομένων</button></div>`);
 }
 
-const VIEWS = {menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
+const VIEWS = {fin:vFin, menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
 
 function render(){
   renderHeader();
@@ -580,7 +576,10 @@ document.addEventListener('submit', ev => {
     const a = num(f.get('amount')); if(a == null) return toast('Βάλε ποσό');
     const w = f.get('when'); S.cash.push({id:uid(), amount:a, by, at:w ? new Date(w).getTime() : now});
   }
-  if(kind === 'debtor') S.debtors.push({id:uid(), name:val(f, 'name')});
+  if(kind === 'debtor'){
+    const nm = val(f, 'name'); if(S.debtors.some(c => norm(c.name) === norm(nm))) return toast('Υπάρχει ήδη πελάτης με αυτό το όνομα');
+    S.debtors.push({id:uid(), name:nm});
+  }
   if(kind === 'debt'){
     const c = S.debtors.find(x => x.id === openDebtor), pay = ev.submitter?.value === 'pay';
     let a = num(f.get('amount')), item = val(f, 'item');
@@ -590,8 +589,9 @@ document.addEventListener('submit', ev => {
   }
   if(kind === 'prod') S.products.push({id:uid(), name:val(f, 'name'), price:num(f.get('price')), tags:normTags(f.get('tags')), by});
   if(kind === 'recv'){
-    const a = num(f.get('amount')); if(a == null) return toast('Βάλε ποσό');
-    S.receipts.push({id:uid(), name:val(f, 'name'), supplier:val(f, 'supplier') || undefined, total:num(f.get('total')) ?? undefined, date:f.get('date') || today(), amount:a, src:f.get('src') === 'bank' ? 'bank' : 'cash', by, at:now});
+    const a = num(f.get('amount')), tot = num(f.get('total'));
+    if(!val(f, 'supplier')) return toast('Διάλεξε προμηθευτή'); if(tot == null) return toast('Βάλε αξία τιμολογίου'); if(a == null) return toast('Βάλε ποσό που πλήρωσες');
+    S.receipts.push({id:uid(), name:val(f, 'name'), supplier:val(f, 'supplier'), total:tot, date:f.get('date') || today(), amount:a, src:f.get('src') === 'bank' ? 'bank' : 'cash', by, at:now});
   }
   if(kind === 'z'){
     const a = num(f.get('z')); if(a == null) return toast('Βάλε το Ζ της ταμειακής');
@@ -635,6 +635,13 @@ document.addEventListener('click', async ev => {
     case 'zDel': delItem('zs', id); return;
     case 'expDel': delItem('expenses', id); return;
     case 'cview': cashView = id; render(); return;
+    case 'tagmore': tagsAll = !tagsAll; render(); return;
+    case 'prodNew': {
+      const v = await formModal('Νέο προϊόν', [{name:'name', label:'Όνομα προϊόντος', required:1}, {name:'price', label:'Τιμή €', inputmode:'decimal'}, {name:'tags', label:'Ετικέτες (διάλεξε ή γράψε, με κόμμα)', chips:1}], {}, 'Προσθήκη');
+      if(!v) return;
+      S.products.push({id:uid(), name:v.name, price:num(v.price), tags:normTags(v.tags), by:who()});
+      save(); render(); toast('Αποθηκεύτηκε'); return;
+    }
     case 'nview': needsView = id; q = ''; render(); return;
     case 'tagpick': {
       const fm = b.closest('form'), inp = fm.querySelector('[name=tags]'), cur = tagsOf({tags:inp.value}), k = norm(id);
@@ -910,7 +917,7 @@ function gsOpen(){
       add('Πελάτες', S.debtors.filter(c => has(c.name)), c => ({t:c.name, s:eur(owed(c)), go:() => jump('debt', {d:c.id})}));
       add('Προμηθευτές', S.suppliers.filter(x => has(x.name + ' ' + (x.phone || ''))), x => ({t:x.name, s:eur(supBal(x.id)), go:() => jump('sup', {s:x.id})}));
       add('Προϊόντα προμηθευτών', S.sprices.filter(x => has(x.name)), x => ({t:x.name, s:supName(x.supplier) + ' · ' + eur(x.price), go:() => jump('sup', {s:x.supplier, v:'prices'})}));
-      add('Παραλαβές', S.receipts.filter(r => has(r.name + ' ' + supName(r.supplier))), r => ({t:r.name, s:dd(r.date) + ' · ' + eur(r.amount), go:() => r.supplier ? jump('sup', {s:r.supplier, v:'buys'}) : jump('recv', {q:r.name})}));
+      add('Παραλαβές', S.receipts.filter(r => has(r.name + ' ' + supName(r.supplier))), r => ({t:r.name || supName(r.supplier) || 'Παραλαβή', s:dd(r.date) + ' · ' + eur(r.amount), go:() => r.supplier ? jump('sup', {s:r.supplier, v:'buys'}) : jump('recv', {q:r.name})}));
       if(isAdmin()) add('Έξοδα', S.expenses.filter(e => has(expName(e))), e => ({t:expName(e), s:dd(e.date) + ' · ' + eur(e.amount), go:() => jump('exp', {q:expName(e)})}));
       add('Ελλείψεις', S.needs.filter(n => has(n.text)), n => ({t:n.text, s:n.done ? 'παραγγέλθηκε' : 'λείπει', go:() => jump('needs')}));
       add('Τηλέφωνα', S.contacts.filter(c => has(c.name + ' ' + (c.phone || '') + ' ' + (c.note || ''))), c => ({t:c.name, s:c.phone || '', go:() => jump('tel', {q:c.name})}));
