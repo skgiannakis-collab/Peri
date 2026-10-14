@@ -90,7 +90,6 @@ a{color:var(--g);font-weight:700}
 <main id="main"></main>
 <nav id="nav" aria-label="Ενότητες"></nav>
 <div id="toast" role="status"></div>
-<input type="file" id="attach" accept="image/*,application/pdf" hidden>
 
 <script>
 /* ====== ΡΥΘΜΙΣΕΙΣ FIREBASE ====== */
@@ -100,10 +99,9 @@ const ADMIN_NAME = 'peri';     // όνομα διαχειριστή (αν το �
 const SALT = 'peripteros!';    // προστίθεται αθέατα στον κωδικό, επειδή το Firebase θέλει 6+ χαρακτήρες
 /* ======================================================== */
 const DB = FIREBASE_DB_URL.replace(/\/+$/, ''), AUTH = !!(DB && FIREBASE_API_KEY);
-const SKEY = 'peripteros-session', BKEY = 'peripteros-base', PKEY = 'peripteros-files';
-let PF = {}; try{ PF = JSON.parse(localStorage.getItem(PKEY)) || {}; }catch(e){}
-const savePF = () => localStorage.setItem(PKEY, JSON.stringify(PF));
-let lastSub = {s:'', t:0}, openSup = null, supView = 'order', attachT = null;
+const SKEY = 'peripteros-session', BKEY = 'peripteros-base';
+try{ localStorage.removeItem('peripteros-files'); }catch(e){}
+let lastSub = {s:'', t:0}, openSup = null, supView = 'order';
 let session = null, tok = {id:'', exp:0}, users = null;
 const KEY = 'peripteros-v1';
 const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[]});
@@ -149,7 +147,6 @@ function nextDelivery(sp){
   for(let i = 0; ds.length && i < 8; i++){ const d = new Date(); d.setDate(d.getDate() + i); if(ds.includes(d.getDay())) return i === 0 ? 'σήμερα' : i === 1 ? 'αύριο' : DAYN[d.getDay()] + ' ' + d.toLocaleDateString('el-GR', {day:'2-digit', month:'2-digit'}); }
   return '';
 }
-const attachBtn = (col, x) => `<button class="chip sm" data-act="attach" data-col="${col}" data-id="${x.id}" aria-label="Παραστατικό">${x.file ? '📎' : '📷'}</button>`;
 const needRow = n => `<div class="item row ${n.done ? 'done' : ''}"><div><div class="t">${esc(n.text)}${tag(n)}${n.supplier && !openSup ? ` <span class="badge">${esc(supName(n.supplier))}</span>` : ''}</div>${n.done && n.od ? `<div class="by">παραγγέλθηκε ${dt(n.od)}</div>` : ''}</div>
   <div class="row"><button class="chip" data-act="needDone" data-id="${n.id}">${n.done ? 'Επαναφορά' : 'Παραγγέλθηκε'}</button>${editBtn('needEdit', n)}${delBtn('needDel', n)}</div></div>`;
 const expName = e => e.cat + (e.note ? ' – ' + e.note : '');
@@ -327,7 +324,7 @@ function recvForm(sid){
     ${srcSelect()}<button class="primary">Καταχώρηση παραλαβής</button></form>`;
 }
 const recvRow = r => `<div class="item row"><div><div class="t">${esc(r.name)}${tag(r)}</div><div class="by">${r.supplier ? esc(supName(r.supplier)) + ' · ' : ''}${srcLabel(srcOf(r))}${r.total != null && r.total !== r.amount ? ' · αξία ' + eur(r.total) : ''}</div></div>
-  <div class="row"><b class="price">${eur(r.amount)}</b>${attachBtn('receipts', r)}${editBtn('recvEdit', r)}${delBtn('recvDel', r)}</div></div>`;
+  <div class="row"><b class="price">${eur(r.amount)}</b>${editBtn('recvEdit', r)}${delBtn('recvDel', r)}</div></div>`;
 function vRecv(){
   const groups = {};
   S.receipts.filter(r => match(r.name + ' ' + supName(r.supplier))).forEach(r => (groups[r.date] = groups[r.date] || []).push(r));
@@ -381,7 +378,7 @@ function vExp(){
     <button class="primary">Καταχώρηση εξόδου</button></form>
   <input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">
   ${l.length ? l.map(e => `<div class="item row"><div><div class="t">${esc(expName(e))}${tag(e)}</div><div class="by">${dd(e.date)} · ${srcLabel(srcOf(e))}</div></div>
-    <div class="row"><b class="price">${eur(e.amount)}</b>${attachBtn('expenses', e)}${editBtn('expEdit', e)}${delBtn('expDel', e)}</div></div>`).join('') : empty('Κανένα έξοδο ακόμα.')}`;
+    <div class="row"><b class="price">${eur(e.amount)}</b>${editBtn('expEdit', e)}${delBtn('expDel', e)}</div></div>`).join('') : empty('Κανένα έξοδο ακόμα.')}`;
 }
 
 /* ---------- Έσοδα / Έξοδα ---------- */
@@ -619,7 +616,6 @@ document.addEventListener('click', async ev => {
     case 'taskDone': { const x = S.tasks.find(i => i.id === id); x.done = !x.done; break; }
     case 'taskDel': delItem('tasks', id); return;
     case 'gs': gsOpen(); return;
-    case 'attach': openFile(b.dataset.col, id); return;
     case 'supOpen': openSup = id; supView = 'order'; q = ''; render(); window.scrollTo(0, 0); return;
     case 'supBack': openSup = null; render(); return;
     case 'supv': supView = id; render(); return;
@@ -695,7 +691,7 @@ const isAdminName = n => normName(n) === normName(ADMIN_NAME);
 function setRemote(v){ remote = v; try{ v ? localStorage.setItem(BKEY, JSON.stringify(v)) : localStorage.removeItem(BKEY); }catch(e){} }
 function setStatus(st){
   const el = $('#sync'); if(!el) return;
-  const n = st === 'offline' ? (remote ? Object.keys(diff(remote, localMaps())).length : 0) + Object.keys(PF).length : 0;
+  const n = st === 'offline' ? (remote ? Object.keys(diff(remote, localMaps())).length : 0) : 0;
   el.textContent = {off:'Μόνο σε αυτή τη συσκευή', ok:'● Συγχρονισμένο', offline:'● Χωρίς σύνδεση' + (n ? ' – ' + n + ' αλλαγές σε αναμονή' : '')}[st] || '';
 }
 function renderHeader(){
@@ -820,7 +816,6 @@ async function sync(){
   if(!navigator.onLine) return setStatus('offline');
   syncing = true;
   try{
-    for(const fid of Object.keys(PF)){ await api('PUT', '/files/' + fid + '.json', PF[fid]); delete PF[fid]; savePF(); }
     do{
       again = false;
       if(remote){
@@ -862,44 +857,6 @@ document.addEventListener('visibilitychange', () => { if(!document.hidden) sync(
 
 boot();
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
-
-/* ---------- Παραστατικά ---------- */
-document.addEventListener('change', async ev => {
-  if(ev.target.id !== 'attach') return;
-  const file = ev.target.files[0]; ev.target.value = ''; if(!file || !attachT) return;
-  const x = S[attachT.col].find(i => i.id === attachT.id); if(!x) return;
-  try{
-    let data, type = file.type;
-    if(type.startsWith('image/')){
-      const bm = await createImageBitmap(file), k = Math.min(1, 1400 / Math.max(bm.width, bm.height)), c = document.createElement('canvas');
-      c.width = Math.round(bm.width * k); c.height = Math.round(bm.height * k); c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height);
-      data = c.toDataURL('image/jpeg', .65); type = 'image/jpeg';
-    }else if(type === 'application/pdf' && file.size < 900000){
-      data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(file); });
-    }else return toast('Μόνο φωτογραφία ή PDF έως 900KB');
-    const fid = uid(); PF[fid] = {name:file.name, type, data, by:who(), at:Date.now()}; savePF();
-    x.file = fid; x.ed = who(); save(); render(); toast('Επισυνάφθηκε');
-  }catch(e){ toast('Δεν έγινε η επισύναψη'); }
-});
-async function openFile(col, id){
-  const x = S[col].find(i => i.id === id); if(!x) return;
-  if(!AUTH) return toast('Τα παραστατικά χρειάζονται λογαριασμό Firebase');
-  if(!x.file){ attachT = {col, id}; $('#attach').click(); return; }
-  const m = mk(`<div class="sheet"><div id="fv" class="empty">Φόρτωση…</div><div class="row" style="margin-top:10px"><button class="ghost" data-a="rep">Αλλαγή</button><button class="danger" data-a="del">Αφαίρεση</button><button class="primary" data-a="x">Κλείσιμο</button></div></div>`);
-  m.onclick = async e => {
-    const a = e.target.closest('[data-a]')?.dataset.a;
-    if(e.target === m || a === 'x') return m.remove();
-    if(a === 'rep'){ m.remove(); attachT = {col, id}; $('#attach').click(); }
-    if(a === 'del'){ if(!await ask('Να αφαιρεθεί το παραστατικό;', 'Αφαίρεση')) return; delete PF[x.file]; savePF(); api('DELETE', '/files/' + x.file + '.json').catch(() => {}); delete x.file; x.ed = who(); save(); render(); m.remove(); }
-  };
-  const fv = m.querySelector('#fv');
-  try{
-    const f = PF[x.file] || await (await api('GET', '/files/' + x.file + '.json')).json();
-    if(!f) return fv.textContent = 'Δεν βρέθηκε το αρχείο';
-    if(f.type === 'application/pdf'){ const u = URL.createObjectURL(await (await fetch(f.data)).blob()); fv.innerHTML = `<a href="${u}" target="_blank" rel="noopener">Άνοιγμα PDF (${esc(f.name)})</a>`; }
-    else fv.innerHTML = `<img src="${f.data}" alt="Παραστατικό" style="max-width:100%;border-radius:8px">`;
-  }catch(e){ fv.textContent = 'Δεν φορτώθηκε (χωρίς σύνδεση;)'; }
-}
 
 /* ---------- Καθολική αναζήτηση ---------- */
 function jump(t, o = {}){ tab = t; q = o.q || ''; openDebtor = o.d || null; openSup = o.s || null; supView = o.v || 'order'; editId = null; render(); window.scrollTo(0, 0); }
