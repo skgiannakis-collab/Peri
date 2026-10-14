@@ -75,6 +75,7 @@ a{color:var(--g);font-weight:700}
 .inrow .sm{flex:none}
 #toast button{margin-left:10px;background:var(--amb);color:#1b2421;border:0;border-radius:8px;padding:6px 12px;font-weight:700;min-height:36px}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.blur b,.blur .big{filter:blur(7px);user-select:none}
 .chip.tg{min-height:34px;padding:2px 12px;font-size:14px}
 .ptags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .sum{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
@@ -105,14 +106,14 @@ const savePF = () => localStorage.setItem(PKEY, JSON.stringify(PF));
 let lastSub = {s:'', t:0}, openSup = null, supView = 'order', attachT = null;
 let session = null, tok = {id:'', exp:0}, users = null;
 const KEY = 'peripteros-v1';
-const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[]});
+const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[]});
 function migrate(s){ s.entries = s.entries || []; s.debtors.forEach(c => { if(Array.isArray(c.entries)){ c.entries.forEach(e => s.entries.push({...e, debtor:c.id})); delete c.entries; } });
   (s.expiry || []).forEach(e => s.products.push({id:'x' + e.id, name:e.name, exp:e.date, by:e.by})); s.expiry = []; delete s.cigs; return s; }
 function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStorage.getItem(KEY)) || {})); }catch(e){ return blank(); } }
 let S = load();
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Δεν έγινε αποθήκευση!'); } sync(); }
 
-let tab = 'prod', openDebtor = null, editId = null, q = '', ptag = '', repPeriod = 'month', cashView = 'count';
+let tab = 'home', hideAmts = false, openDebtor = null, editId = null, q = '', ptag = '', repPeriod = 'month', cashView = 'count';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -191,14 +192,15 @@ function delItem(col, id){
 }
 
 const TABS = [
+  ['home','🏠','Σήμερα'],
   ['prod','📦','Προϊόντα'],
   ['debt','👥','Βερεσέ'],
   ['cash','💰','Ταμείο'],
-  ['sup','🏭','Προμηθευτές'],
   ['recv','🚚','Παραλαβές'],
-  ['exp','🧾','Έξοδα'],
   ['needs','📝','Ελλείψεις'],
   ['tel','📞','Τηλέφωνα'],
+  ['sup','🏭','Προμηθευτές'],
+  ['exp','🧾','Έξοδα'],
   ['backup','⚙️','Ρυθμίσεις'],
 ];
 
@@ -242,9 +244,12 @@ function vCount(){
 /* ---------- Βερεσέ ---------- */
 const owed = c => S.entries.filter(e => e.debtor === c.id).reduce((s, e) => s + (e.amount || 0), 0);
 function vDebt(){
+  return `<div class="${hideAmts ? 'blur' : ''}"><div class="tools"><button class="chip" data-act="blur">${hideAmts ? '👁 Εμφάνιση ποσών' : '🙈 Απόκρυψη ποσών'}</button></div>` + vDebt0() + '</div>';
+}
+function vDebt0(){
   if(openDebtor){
     const c = S.debtors.find(x => x.id === openDebtor);
-    if(!c){ openDebtor = null; return vDebt(); }
+    if(!c){ openDebtor = null; return vDebt0(); }
     const tot = owed(c);
     const es = S.entries.filter(e => e.debtor === c.id).sort((a, b) => b.at - a.at);
     return `<button class="ghost" data-act="back" style="margin-bottom:10px">← Όλοι οι πελάτες</button>
@@ -268,6 +273,47 @@ function vDebt(){
   <input data-search placeholder="Αναζήτηση πελάτη…" value="${esc(q)}" style="margin-bottom:10px">
   <div id="list">${l.length ? l.map(c => { const t = owed(c); return `<div class="item row" data-act="openDebtor" data-id="${c.id}" style="cursor:pointer" tabindex="0">
     <div class="t">${esc(c.name)}</div><b class="${t > 0 ? 'owe' : ''}">${eur(t)}</b></div>`; }).join('') : empty('Κανένας πελάτης ακόμα.')}</div>`;
+}
+
+/* ---------- Σήμερα ---------- */
+const OVERDUE_DAYS = 30;
+const daysAgo = d => Math.floor((Date.now() - new Date(d + 'T00:00:00')) / 864e5);
+function fifo(ch, paid){
+  ch = ch.map(c => ({...c})).sort((a, b) => a.d.localeCompare(b.d)); let left = paid;
+  ch.forEach(c => { const k = Math.min(left, c.v); c.v -= k; left -= k; });
+  const o = ch.filter(c => c.v > 0.005);
+  return {bal:o.reduce((s, c) => s + c.v, 0), age:o.length ? daysAgo(o[0].d) : 0};
+}
+const debtorAge = c => { const es = S.entries.filter(e => e.debtor === c.id); return fifo(es.filter(e => (e.amount || 0) > 0).map(e => ({d:toLocal(e.at).slice(0, 10), v:e.amount})), -es.filter(e => (e.amount || 0) < 0).reduce((s, e) => s + e.amount, 0)); };
+const supAge = x => fifo(S.receipts.filter(r => r.supplier === x.id && ((r.total ?? r.amount) || 0) - (r.amount || 0) > 0).map(r => ({d:r.date, v:(r.total ?? r.amount) - r.amount})), S.spay.filter(p => p.supplier === x.id).reduce((s, p) => s + (p.amount || 0), 0));
+function vHome(){
+  const t = today(), zt = S.zs.filter(z => z.date === t);
+  const tz = zt.reduce((s, z) => s + (z.z || 0), 0), tp = zt.reduce((s, z) => s + (z.pos || 0), 0);
+  const lz = [...S.zs].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.at - a.at)[0], lc = [...S.cash].sort((a, b) => b.at - a.at)[0];
+  const open = S.needs.filter(n => !n.done), ord = S.needs.filter(n => n.done);
+  const tasks = S.tasks.filter(x => !x.done).sort((a, b) => a.date.localeCompare(b.date));
+  const due = tasks.filter(x => x.date <= t), later = tasks.filter(x => x.date > t).slice(0, 5);
+  const deliv = S.suppliers.filter(x => nextDelivery(x) === 'σήμερα');
+  const dl = S.debtors.map(c => ({c, ...debtorAge(c)})).filter(r => r.bal > 0.005).sort((a, b) => b.age - a.age);
+  const sl = S.suppliers.map(x => ({x, ...supAge(x)})).filter(r => r.bal > 0.005).sort((a, b) => b.age - a.age);
+  const card = (h, inner, more) => `<div class="card"><h2>${h}</h2>${inner}${more ? `<button class="ghost" data-act="jumpTab" data-id="${more[0]}" style="width:100%;margin-top:4px">${more[1]}</button>` : ''}</div>`;
+  const taskRow = x => `<div class="item row"><div><div class="t">${esc(x.text)}${tag(x)}</div><div class="by">${x.date < t ? '<span class="badge bad">εκπρόθεσμη</span> ' : ''}${dd(x.date)}</div></div><div class="row"><button class="ok sm" data-act="taskDone" data-id="${x.id}" aria-label="Έγινε">✓</button>${delBtn('taskDel', x)}</div></div>`;
+  const late = r => r.age > OVERDUE_DAYS ? `<span class="badge bad">${r.age} ημ.</span>` : r.age ? `<span class="by">${r.age} ημ.</span>` : '';
+  let h = '';
+  if(isAdmin()) h += card('Τζίρος', `<div class="big">${zt.length ? eur(tz) : '—'}</div><div class="muted">${zt.length ? `σήμερα · μετρητά ${eur(tz - tp)} · POS ${eur(tp)}` : 'Δεν έχει καταχωρηθεί Ζ σήμερα'}</div>
+    <div class="sum" style="margin-top:8px"><span>Τελευταίο Ζ${lz ? ' (' + dd(lz.date) + ')' : ''}</span><b>${lz ? eur(lz.z) : '—'}</b></div>
+    <div class="sum" style="border:0"><span>Τελευταία καταμέτρηση${lc ? ' (' + dt(lc.at) + ')' : ''}</span><b>${lc ? eur(lc.amount) : '—'}</b></div>`, ['cash', 'Ταμείο']);
+  h += card('Εργασίες σήμερα', `<form data-form="task" class="grid" style="margin-bottom:8px"><input class="full" name="text" placeholder="Νέα εργασία" required autocomplete="off"><input class="full" name="date" type="date" value="${t}" required aria-label="Ημερομηνία"><button class="primary">Προσθήκη</button></form>
+    ${deliv.map(x => `<div class="item row" data-act="hsup" data-id="${x.id}" style="cursor:pointer" tabindex="0"><div class="t">🚚 Παράδοση σήμερα: ${esc(x.name)}</div></div>`).join('')}
+    ${due.length ? due.map(taskRow).join('') : (deliv.length ? '' : empty('Καμία εργασία για σήμερα.'))}
+    ${later.length ? `<h2 class="muted" style="font-size:14px;margin:10px 0 4px">Επόμενες</h2>` + later.map(taskRow).join('') : ''}`);
+  h += card(`Εκκρεμείς παραγγελίες (${ord.length})`, ord.length ? ord.slice(0, 8).map(n => { const sp = S.suppliers.find(x => x.id === n.supplier), nd = sp ? nextDelivery(sp) : '';
+    return `<div class="item row" ${sp ? `data-act="hsup" data-id="${sp.id}" style="cursor:pointer" tabindex="0"` : ''}><div><div class="t">${esc(n.text)}</div><div class="by">${sp ? esc(sp.name) : 'χωρίς προμηθευτή'}${n.od ? ' · ' + dd(toLocal(n.od).slice(0, 10)) : ''}${nd ? ' · αναμένεται ' + nd : ''}</div></div></div>`; }).join('') : empty('Καμία εκκρεμής παραγγελία.'), ord.length > 8 ? ['needs', 'Όλες οι ελλείψεις'] : null);
+  h += card(`Προϊόντα που τελειώνουν (${open.length})`, open.length ? open.slice(0, 8).map(n => `<div class="item row"><div class="t">${esc(n.text)}${n.supplier ? ` <span class="badge">${esc(supName(n.supplier))}</span>` : ''}</div></div>`).join('') : empty('Δεν λείπει τίποτα.'), open.length ? ['needs', 'Ελλείψεις'] : null);
+  h += `<div class="${hideAmts ? 'blur' : ''}">` + card('Χρέη πελατών', `<div class="tools"><button class="chip" data-act="blur">${hideAmts ? '👁 Εμφάνιση ποσών' : '🙈 Απόκρυψη ποσών'}</button></div>` +
+    (dl.length ? `<div class="muted" style="margin-bottom:6px">Ληξιπρόθεσμα: ${dl.filter(r => r.age > OVERDUE_DAYS).length} (άνω των ${OVERDUE_DAYS} ημερών)</div>` + dl.slice(0, 6).map(r => `<div class="item row" data-act="hdebt" data-id="${r.c.id}" style="cursor:pointer" tabindex="0"><div class="t">${esc(r.c.name)} ${late(r)}</div><b class="owe">${eur(r.bal)}</b></div>`).join('') : empty('Κανείς δεν χρωστάει.')), dl.length > 6 ? ['debt', 'Όλοι οι πελάτες'] : null) + '</div>';
+  h += card('Πληρωμές προμηθευτών', sl.length ? sl.slice(0, 8).map(r => `<div class="item row" data-act="hsup" data-id="${r.x.id}" data-v="pays" style="cursor:pointer" tabindex="0"><div class="t">${esc(r.x.name)} ${late(r)}</div><b class="owe">${eur(r.bal)}</b></div>`).join('') : empty('Δεν οφείλεις σε κανέναν.'), sl.length > 8 ? ['sup', 'Όλοι οι προμηθευτές'] : null);
+  return h;
 }
 
 /* ---------- Προμηθευτές ---------- */
@@ -343,15 +389,16 @@ function reportCard(){
   const t = today();
   const start = {day:t, month:t.slice(0, 7) + '-01', year:t.slice(0, 4) + '-01-01', all:''}[repPeriod];
   const inP = d => !start || (d || '') >= start;
-  const zs = S.zs.filter(z => inP(z.date)), rc = S.receipts.filter(r => inP(r.date)), ex = S.expenses.concat(S.spay.map(p => ({...p, cat:'Πληρωμές προμηθευτών'}))).filter(e => inP(e.date));
+  const zs = S.zs.filter(z => inP(z.date));
+  const sp = S.receipts.filter(r => r.supplier && inP(r.date)).concat(S.spay.filter(p => inP(p.date)));
+  const ex = S.expenses.filter(e => inP(e.date));
   const sum = (l, f) => l.reduce((x, e) => x + (f(e) || 0), 0);
   const Z = sum(zs, z => z.z), P = sum(zs, z => z.pos), C = Z - P;
-  const R = sum(rc, r => r.amount), X = sum(ex, e => e.amount), E = R + X, D = Z - E;
-  const out = k => sum(rc.filter(r => srcOf(r) === k), r => r.amount) + sum(ex.filter(e => srcOf(e) === k), e => e.amount);
+  const SP = sum(sp, e => e.amount), X = sum(ex, e => e.amount), E = SP + X, D = Z - E;
+  const out = k => sum(sp.concat(ex).filter(e => srcOf(e) === k), e => e.amount);
   const months = {}, mo = k => months[k] = months[k] || {i:0, e:0};
   zs.forEach(z => { if(z.date) mo(z.date.slice(0, 7)).i += z.z || 0; });
-  rc.forEach(r => { if(r.date) mo(r.date.slice(0, 7)).e += r.amount || 0; });
-  ex.forEach(e => { if(e.date) mo(e.date.slice(0, 7)).e += e.amount || 0; });
+  sp.concat(ex).forEach(e => { if(e.date) mo(e.date.slice(0, 7)).e += e.amount || 0; });
   const mk2 = Object.keys(months).sort().reverse();
   const cats = {}; ex.forEach(e => cats[e.cat] = (cats[e.cat] || 0) + (e.amount || 0));
   const cl = Object.entries(cats).sort((a, b) => b[1] - a[1]);
@@ -361,15 +408,15 @@ function reportCard(){
     ${row(`Έσοδα (Ζ ταμειακής, ${zs.length})`, Z, 'pos')}
     ${row('από μετρητά', C, '', true)}${row('από κάρτα (POS)', P, '', true)}
     ${row('Έξοδα', E, 'owe')}
-    ${row('παραλαβές', R, '', true)}${row('λοιπά έξοδα & πληρωμές προμηθευτών', X, '', true)}
+    ${row('πληρωμές προμηθευτών', SP, '', true)}${row('έξοδα (μισθοί, ΔΕΗ…)', X, '', true)}
     ${row('<b>Διαφορά</b>', D, D >= 0 ? 'pos' : 'owe')}
     <h2 class="muted" style="font-size:15px;margin:12px 0 4px">Ανά πηγή</h2>
     ${row('Ταμείο: μετρητά − πληρωμές', C - out('cash'), C - out('cash') >= 0 ? 'pos' : 'owe')}
     ${row('Τράπεζα: POS − πληρωμές', P - out('bank'), P - out('bank') >= 0 ? 'pos' : 'owe')}
-    ${cl.length ? `<h2 class="muted" style="font-size:15px;margin:12px 0 4px">Λοιπά έξοδα ανά κατηγορία</h2>` + cl.map(([k, v]) => row(esc(k), v)).join('') : ''}
+    ${cl.length ? `<h2 class="muted" style="font-size:15px;margin:12px 0 4px">Έξοδα ανά κατηγορία</h2>` + cl.map(([k, v]) => row(esc(k), v)).join('') : ''}
     ${mk2.length > 1 ? `<h2 class="muted" style="font-size:15px;margin:12px 0 4px">Ανά μήνα</h2>` + mk2.map(k => { const m = months[k];
       return `<div class="sum"><span>${new Date(k + '-01T00:00:00').toLocaleDateString('el-GR', {month:'long', year:'numeric'})}</span><span class="by">${eur(m.i)} − ${eur(m.e)} = <b class="${m.i - m.e >= 0 ? 'pos' : 'owe'}">${eur(m.i - m.e)}</b></span></div>`; }).join('') : ''}
-    <p class="muted" style="margin:10px 0 0">Έσοδα = Ζ ταμειακής (συνολικός τζίρος, μαζί με κάρτα). Έξοδα = παραλαβές + λοιπά έξοδα. Η καταμέτρηση ταμείου δεν μετράει στα έσοδα.</p></div>`;
+    <p class="muted" style="margin:10px 0 0">Έσοδα = Ζ ταμειακής (μαζί με POS). Έξοδα = πληρωμές προς προμηθευτές (καρτέλα πληρωμών και «πλήρωσα τώρα» σε παραλαβή με προμηθευτή) + καρτέλα Έξοδα.</p></div>`;
 }
 
 /* ---------- Προϊόντα (όνομα, τιμή, ετικέτες) ---------- */
@@ -469,7 +516,7 @@ function vBackup(){
     <button class="danger" data-act="wipe">Διαγραφή όλων των δεδομένων</button></div>`);
 }
 
-const VIEWS = {needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
+const VIEWS = {home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
 
 function render(){
   renderHeader();
@@ -499,6 +546,7 @@ document.addEventListener('submit', ev => {
     const text = val(f, 'text'); if(S.needs.some(n => !n.done && norm(n.text) === norm(text))) return toast('Υπάρχει ήδη στη λίστα');
     S.needs.unshift({id:uid(), text, supplier:kind === 'sneed' ? openSup : (val(f, 'supplier') || undefined), by, at:now, done:false});
   }
+  if(kind === 'task') S.tasks.push({id:uid(), text:val(f, 'text'), date:f.get('date') || today(), done:false, by, at:now});
   if(kind === 'sup') S.suppliers.push({id:uid(), name:val(f, 'name'), phone:val(f, 'phone'), days:val(f, 'days'), by});
   if(kind === 'sprice') S.sprices.push({id:uid(), supplier:openSup, name:val(f, 'name'), price:num(f.get('price')), by});
   if(kind === 'spay'){
@@ -564,6 +612,12 @@ document.addEventListener('click', async ev => {
     case 'zDel': delItem('zs', id); return;
     case 'expDel': delItem('expenses', id); return;
     case 'cview': cashView = id; render(); return;
+    case 'blur': hideAmts = !hideAmts; render(); return;
+    case 'jumpTab': go(id); return;
+    case 'hsup': jump('sup', {s:id, v:b.dataset.v}); return;
+    case 'hdebt': jump('debt', {d:id}); return;
+    case 'taskDone': { const x = S.tasks.find(i => i.id === id); x.done = !x.done; break; }
+    case 'taskDel': delItem('tasks', id); return;
     case 'gs': gsOpen(); return;
     case 'attach': openFile(b.dataset.col, id); return;
     case 'supOpen': openSup = id; supView = 'order'; q = ''; render(); window.scrollTo(0, 0); return;
@@ -600,7 +654,7 @@ document.addEventListener('click', async ev => {
   save(); render();
 });
 document.addEventListener('keydown', ev => {
-  if((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[data-act="openDebtor"],[data-act="supOpen"]')){ ev.preventDefault(); ev.target.click(); }
+  if((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[data-act="openDebtor"],[data-act="supOpen"],[data-act="hsup"],[data-act="hdebt"]')){ ev.preventDefault(); ev.target.click(); }
 });
 document.addEventListener('change', async ev => {
   if(ev.target.id !== 'file') return;
@@ -614,7 +668,7 @@ document.addEventListener('input', ev => {
   if(ev.target.matches('[data-search]')){ q = ev.target.value; toList(); }
 });
 /* ---------- Λογαριασμοί και συγχρονισμός (Firebase, REST) ---------- */
-const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay'];
+const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay','tasks'];
 let remote = null, syncing = false, again = false, needRender = false, es = null, rp = null;
 const clone = o => JSON.parse(JSON.stringify(o));
 const toMap = arr => Object.fromEntries(arr.map(x => [x.id, x]));
@@ -718,7 +772,7 @@ async function doLogin(f){
       await api('PUT', '/users/' + r.localId + '.json', u);
     }
     session.name = u.name; session.role = u.role === 'admin' ? 'admin' : 'user';
-    saveSession(); tab = 'prod'; render(); stream(); sync();
+    saveSession(); tab = 'home'; render(); stream(); sync();
   }catch(e){ if(session && e.message !== 'auth') toast('Χωρίς σύνδεση στο internet'); else if(!session && e.message !== 'auth') toast('Χωρίς σύνδεση στο internet'); }
 }
 async function loadUsers(){
