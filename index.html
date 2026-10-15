@@ -108,7 +108,7 @@ try{ localStorage.removeItem('peripteros-files'); }catch(e){}
 let lastSub = {s:'', t:0}, openSup = null, supView = 'order';
 let session = null, tok = {id:'', exp:0}, users = null;
 const KEY = 'peripteros-v1';
-const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[], settings:[], posts:[]});
+const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[], settings:[], posts:[], members:[], likes:[], notifs:[]});
 function migrate(s){ s.entries = s.entries || []; s.debtors.forEach(c => { if(Array.isArray(c.entries)){ c.entries.forEach(e => s.entries.push({...e, debtor:c.id})); delete c.entries; } });
   (s.expiry || []).forEach(e => s.products.push({id:'x' + e.id, name:e.name, exp:e.date, by:e.by})); s.expiry = []; delete s.cigs; return s; }
 function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStorage.getItem(KEY)) || {})); }catch(e){ return blank(); } }
@@ -169,10 +169,13 @@ function nextDelivery(sp){
   return '';
 }
 function purgeNeeds(){
-  const lim = Date.now() - 3 * 864e5, n0 = S.needs.length, p0 = S.posts.length;
+  const now = Date.now(), lim = now - 3 * 864e5, n0 = S.needs.length, p0 = S.posts.length, l0 = S.likes.length, f0 = S.notifs.length;
   S.needs = S.needs.filter(n => !(n.rcv && n.rcv < lim));
   if(p0 > 200) S.posts = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
-  if(S.needs.length === n0 && S.posts.length === p0) return false; save(); return true;
+  const ids = new Set(S.posts.map(p => p.id));
+  S.likes = S.likes.filter(l => ids.has(l.post));
+  S.notifs = S.notifs.filter(n => n.at > now - 14 * 864e5);
+  if(S.needs.length === n0 && S.posts.length === p0 && S.likes.length === l0 && S.notifs.length === f0) return false; save(); return true;
 }
 const needRow = n => {
   const left = n.rcv ? Math.max(0, Math.ceil((n.rcv + 3 * 864e5 - Date.now()) / 864e5)) : 0;
@@ -371,8 +374,36 @@ function locOpen(){
 }
 
 /* ---------- Social ---------- */
-const postForm = () => `<form data-form="post" class="grid" style="margin-bottom:8px"><textarea class="full" name="text" rows="2" maxlength="500" placeholder="Γράψε κάτι για την ομάδα…" required></textarea><button class="primary">Δημοσίευση</button></form>`;
-const postRow = x => `<div class="item"><div class="row"><b>${esc(x.by || '—')}</b><span class="by">${dt(x.at)}</span></div><div style="margin-top:4px;overflow-wrap:anywhere">${esc(x.text).replace(/\n/g, '<br>')}</div>${canDel(x) ? `<div style="text-align:right;margin-top:4px">${delBtn('postDel', x)}</div>` : ''}</div>`;
+const me = () => session ? session.uid : 'local';
+const memName = id => (S.members.find(m => m.id === id) || {}).name || '';
+const memChips = () => { const l = S.members.filter(m => m.id !== me()); return l.length ? `<input type="hidden" name="tg" value=""><div class="tags full"><span class="by" style="align-self:center">Επισήμανση:</span>${l.map(m => `<button type="button" class="chip tg" data-act="mempick" data-id="${esc(m.id)}">@${esc(m.name)}</button>`).join('')}</div>` : ''; };
+const postForm = () => `<form data-form="post" class="grid" style="margin-bottom:8px"><textarea class="full" name="text" rows="2" maxlength="500" placeholder="Γράψε κάτι για την ομάδα…" required></textarea>${memChips()}<button class="primary">Δημοσίευση</button></form>`;
+const postRow = x => {
+  const lk = S.likes.filter(l => l.post === x.id), mine = lk.some(l => l.u === me()), tg = String(x.tg || '').split(',').map(memName).filter(Boolean);
+  return `<div class="item"><div class="row"><b>${esc(x.by || '—')}</b><span class="by">${dt(x.at)}</span></div><div style="margin-top:4px;overflow-wrap:anywhere">${esc(x.text).replace(/\n/g, '<br>')}</div>${tg.length ? `<div class="by" style="margin-top:4px">${tg.map(n => '@' + esc(n)).join(' ')}</div>` : ''}
+  <div class="row" style="margin-top:6px"><div><button class="chip tg ${mine ? 'on' : ''}" data-act="like" data-id="${x.id}" aria-label="Like">${mine ? '❤️' : '🤍'} ${lk.length || ''}</button>${lk.length ? ` <span class="by">${esc(lk.map(l => l.name).filter(Boolean).join(', '))}</span>` : ''}</div>${canDel(x) ? delBtn('postDel', x) : ''}</div></div>`;
+};
+/* ---------- Ειδοποιήσεις ---------- */
+const seen = () => +localStorage.getItem('peripteros-seen') || 0;
+const initSeen = () => { try{ if(localStorage.getItem('peripteros-seen') == null) localStorage.setItem('peripteros-seen', String(Date.now())); }catch(e){} };
+const myNotifs = () => S.notifs.filter(n => n.u !== me() && (n.to === me() || n.to === 'all' || (n.to === 'admin' && isAdmin()))).sort((a, b) => b.at - a.at);
+const unread = () => myNotifs().filter(n => n.at > seen()).length;
+const addNotif = (to, text) => S.notifs.push({id:uid(), to, text, u:me(), at:Date.now()});
+let lastUnread = 0;
+const bellBtn = () => { const n = unread(); return `<button data-act="notif" aria-label="Ειδοποιήσεις">🔔${n ? ` <span class="badge bad">${n}</span>` : ''}</button>`; };
+function checkNotifs(){
+  if(!session) return;
+  const n = unread();
+  if(n > lastUnread){ const t = myNotifs()[0]; toast('🔔 ' + (t ? t.text : 'Νέα ειδοποίηση')); }
+  lastUnread = n; renderHeader();
+}
+function notifOpen(){
+  const prev = seen(), l = myNotifs().slice(0, 30);
+  try{ localStorage.setItem('peripteros-seen', String(Date.now())); }catch(e){}
+  lastUnread = 0; renderHeader();
+  const m = mk(`<div class="sheet"><h2>Ειδοποιήσεις</h2>${l.length ? l.map(n => `<div class="item"><div class="t">${esc(n.text)}${n.at > prev ? ' <span class="badge warn">νέο</span>' : ''}</div><div class="by">${dt(n.at)}</div></div>`).join('') : empty('Καμία ειδοποίηση.')}<button class="primary" data-x style="width:100%;margin-top:8px">Κλείσιμο</button></div>`);
+  m.onclick = e => { if(e.target === m || e.target.closest('[data-x]')) m.remove(); };
+}
 function vSocial(){
   const l = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
   return `<h2 style="margin-bottom:8px">Social</h2><div class="card">${postForm()}</div>` + (l.length ? `<div class="muted" style="margin:0 2px 8px">Τελευταίες ${l.length} αναρτήσεις (έως 200)</div>` + l.map(postRow).join('') : empty('Καμία ανάρτηση ακόμα.'));
@@ -567,7 +598,8 @@ async function editItem(kind, id){
   }
   if(kind === 'prod'){
     v = await formModal('Επεξεργασία προϊόντος', [{name:'name', label:'Όνομα προϊόντος', required:1}, {name:'price', label:'Τιμή €', inputmode:'decimal'}, {name:'tags', label:'Ετικέτες (διάλεξε ή γράψε, με κόμμα)', chips:1}], {name:x.name, price:x.price == null ? '' : x.price, tags:x.tags || ''});
-    if(!v) return; x.name = v.name; x.price = num(v.price); x.tags = normTags(v.tags);
+    if(!v) return; const op = x.price, np = num(v.price); x.name = v.name; x.price = np; x.tags = normTags(v.tags);
+    if(op !== np && !(op == null && np == null)) addNotif('all', `Αλλαγή τιμής: ${x.name} ${op == null ? '—' : eur(op)} → ${np == null ? '—' : eur(np)}`);
   }
   if(kind === 'recv'){
     v = await formModal('Επεξεργασία παραλαβής', [{name:'name', label:'Όνομα παραλαβής / αρ. τιμολογίου'}, {name:'supplier', label:'Προμηθευτής', options:supOpts()}, {name:'date', label:'Ημερομηνία', type:'date', required:1}, {name:'total', label:'Αξία τιμολογίου €', inputmode:'decimal', required:1}, {name:'amount', label:'Ποσό που πλήρωσα €', inputmode:'decimal', required:1}, {name:'src', label:'Πληρώθηκε από', options:srcOpts}], {name:x.name, supplier:x.supplier || '', date:x.date, total:x.total ?? x.amount, amount:x.amount, src:srcOf(x)});
@@ -648,10 +680,13 @@ document.addEventListener('submit', ev => {
   if(kind === 'need' || kind === 'sneed'){
     const text = val(f, 'text'); if(S.needs.some(n => !n.done && pk(n.text) === pk(text))) return toast('Υπάρχει ήδη στη λίστα');
     S.needs.unshift({id:uid(), text, sups:kind === 'sneed' ? openSup : (val(f, 'sups') || undefined), by, at:now, done:false});
+    addNotif('admin', `${by || 'Χρήστης'}: προστέθηκε στις ελλείψεις «${text}»`);
   }
   if(kind === 'post'){
     const text = (f.get('text') || '').trim(); if(!text) return;
-    S.posts.unshift({id:uid(), text:text.slice(0, 500), by, at:now});
+    const tg = (f.get('tg') || '').split(',').filter(Boolean);
+    S.posts.unshift({id:uid(), text:text.slice(0, 500), by, u:me(), tg:tg.join(',') || undefined, at:now});
+    tg.forEach(id => addNotif(id, `${by || 'Κάποιος'} σε επισήμανε σε μια ανάρτηση`));
     if(S.posts.length > 200) S.posts = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
   }
   if(kind === 'task') S.tasks.push({id:uid(), text:val(f, 'text'), date:f.get('date') || today(), done:false, by, at:now});
@@ -664,6 +699,7 @@ document.addEventListener('submit', ev => {
   if(kind === 'cash'){
     const a = num(f.get('amount')); if(a == null) return toast('Βάλε ποσό');
     const w = f.get('when'); S.cash.push({id:uid(), amount:a, by, at:w ? new Date(w).getTime() : now});
+    addNotif('admin', `${by || 'Χρήστης'}: νέα καταμέτρηση ταμείου ${eur(a)}`);
   }
   if(kind === 'debtor'){
     const nm = val(f, 'name'); if(S.debtors.some(c => norm(c.name) === norm(nm))) return toast('Υπάρχει ήδη πελάτης με αυτό το όνομα');
@@ -685,6 +721,7 @@ document.addEventListener('submit', ev => {
   if(kind === 'z'){
     const a = num(f.get('z')); if(a == null) return toast('Βάλε το Ζ της ταμειακής');
     S.zs.push({id:uid(), date:f.get('date') || today(), z:a, pos:num(f.get('pos')) ?? 0, by, at:now});
+    addNotif('admin', `${by || 'Χρήστης'}: καταχωρήθηκε Ζ ${eur(a + (num(f.get('pos')) ?? 0))}`);
   }
   if(kind === 'exp'){
     const a = num(f.get('amount')); if(a == null) return toast('Βάλε ποσό');
@@ -759,6 +796,7 @@ document.addEventListener('click', async ev => {
       const x = S.sprices.find(i => i.id === id); if(!x) return;
       if(inNeeds(x.name)) return toast('Είναι ήδη στις ελλείψεις');
       S.needs.unshift({id:uid(), text:x.name, by:who(), at:Date.now(), done:false});
+      addNotif('admin', `${who() || 'Χρήστης'}: προστέθηκε στις ελλείψεις «${x.name}»`);
       save(); render(); toast('Προστέθηκε στις ελλείψεις'); return;
     }
     case 'blur': hideAmts = !hideAmts; try{ localStorage.setItem('peripteros-blur', hideAmts ? '1' : '0'); }catch(e){} render(); return;
@@ -768,6 +806,19 @@ document.addEventListener('click', async ev => {
     case 'taskDone': { const x = S.tasks.find(i => i.id === id); x.done = !x.done; break; }
     case 'taskDel': delItem('tasks', id); return;
     case 'postDel': delItem('posts', id); return;
+    case 'notif': notifOpen(); return;
+    case 'mempick': {
+      const fm = b.closest('form'), inp = fm.querySelector('[name=tg]'), cur = inp.value.split(',').filter(Boolean);
+      inp.value = (cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id]).join(',');
+      fm.querySelectorAll('[data-act=mempick]').forEach(c => c.classList.toggle('on', inp.value.split(',').includes(c.dataset.id))); return;
+    }
+    case 'like': {
+      const p = S.posts.find(x => x.id === id); if(!p) return;
+      const lid = 'l_' + id + '_' + me(), i = S.likes.findIndex(l => l.id === lid);
+      if(i >= 0) S.likes.splice(i, 1);
+      else { S.likes.push({id:lid, post:id, u:me(), name:who(), at:Date.now()}); if(p.u && p.u !== me()) addNotif(p.u, `${who() || 'Κάποιος'} έκανε like στην ανάρτησή σου`); }
+      break;
+    }
     case 'gs': gsOpen(); return;
     case 'supOpen': openSup = id; supView = 'order'; q = ''; render(); window.scrollTo(0, 0); return;
     case 'supBack': openSup = null; render(); return;
@@ -818,7 +869,7 @@ document.addEventListener('input', ev => {
   if(ev.target.name === 'tags'){ const fm = ev.target.closest('form'); if(fm) syncTags(fm); }
 });
 /* ---------- Λογαριασμοί και συγχρονισμός (Firebase, REST) ---------- */
-const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay','tasks','settings','posts'];
+const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay','tasks','settings','posts','members','likes','notifs'];
 let remote = null, syncing = false, again = false, needRender = false, es = null, rp = null;
 const clone = o => JSON.parse(JSON.stringify(o));
 const toMap = arr => Object.fromEntries(arr.map(x => [x.id, x]));
@@ -857,7 +908,7 @@ function renderHeader(){
   } else if(session){
     h.innerHTML = `<button data-act="gs" aria-label="Αναζήτηση">🔍</button><span>${esc(session.name)}${isAdmin() ? ' (διαχειριστής)' : ''}</span><button data-act="logout">Έξοδος</button>`;
   } else h.innerHTML = '';
-  h.insertAdjacentHTML('beforeend', themeBtn());
+  h.insertAdjacentHTML('beforeend', (AUTH && session ? bellBtn() : '') + themeBtn());
   if(!AUTH) setStatus('off'); else if(!session) setStatus('');
 }
 function loginView(){
@@ -924,7 +975,7 @@ async function doLogin(f){
       await api('PUT', '/users/' + r.localId + '.json', u);
     }
     session.name = u.name; session.role = u.role === 'admin' ? 'admin' : 'user';
-    saveSession(); tab = 'home'; render(); stream(); sync();
+    saveSession(); initSeen(); tab = 'home'; render(); stream(); sync();
   }catch(e){ if(session && e.message !== 'auth') toast('Χωρίς σύνδεση στο internet'); else if(!session && e.message !== 'auth') toast('Χωρίς σύνδεση στο internet'); }
 }
 async function loadUsers(){
@@ -993,6 +1044,10 @@ async function sync(){
   }catch(e){ setStatus(session ? 'offline' : ''); }
   finally{ syncing = false; }
   if(needRender && !typing()){ needRender = false; render(); }
+  if(session && remote){
+    if(!S.members.some(m => m.id === session.uid)){ S.members.push({id:session.uid, name:session.name}); save(); }
+    checkNotifs();
+  }
 }
 function stream(){
   if(es){ es.close(); es = null; }
@@ -1004,7 +1059,7 @@ function stream(){
 function boot(){
   if(AUTH){ try{ session = JSON.parse(localStorage.getItem(SKEY)); }catch(e){} if(!session) S = blank(); }
   if(AUTH && session){ try{ remote = JSON.parse(localStorage.getItem(BKEY)); }catch(e){} }
-  purgeNeeds();
+  purgeNeeds(); initSeen();
   render();
   if(AUTH && session){ setStatus('offline'); sync(); }
 }
