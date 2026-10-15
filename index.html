@@ -108,7 +108,7 @@ try{ localStorage.removeItem('peripteros-files'); }catch(e){}
 let lastSub = {s:'', t:0}, openSup = null, supView = 'order';
 let session = null, tok = {id:'', exp:0}, users = null;
 const KEY = 'peripteros-v1';
-const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[], settings:[]});
+const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[], settings:[], posts:[]});
 function migrate(s){ s.entries = s.entries || []; s.debtors.forEach(c => { if(Array.isArray(c.entries)){ c.entries.forEach(e => s.entries.push({...e, debtor:c.id})); delete c.entries; } });
   (s.expiry || []).forEach(e => s.products.push({id:'x' + e.id, name:e.name, exp:e.date, by:e.by})); s.expiry = []; delete s.cigs; return s; }
 function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStorage.getItem(KEY)) || {})); }catch(e){ return blank(); } }
@@ -169,9 +169,10 @@ function nextDelivery(sp){
   return '';
 }
 function purgeNeeds(){
-  const lim = Date.now() - 3 * 864e5, n0 = S.needs.length;
+  const lim = Date.now() - 3 * 864e5, n0 = S.needs.length, p0 = S.posts.length;
   S.needs = S.needs.filter(n => !(n.rcv && n.rcv < lim));
-  if(S.needs.length === n0) return false; save(); return true;
+  if(p0 > 200) S.posts = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
+  if(S.needs.length === n0 && S.posts.length === p0) return false; save(); return true;
 }
 const needRow = n => {
   const left = n.rcv ? Math.max(0, Math.ceil((n.rcv + 3 * 864e5 - Date.now()) / 864e5)) : 0;
@@ -228,7 +229,7 @@ const TABS = [
   ['needs','📝','Ελλείψεις'],
   ['menu','☰','Μενού'],
 ];
-const MENU = [['z','🧮','Ζ ημέρας'], ['exp','🧾','Έξοδα'], ['fin','📊','Οικονομική εικόνα'], ['sup','🏭','Προμηθευτές'], ['tel','📞','Τηλέφωνα'], ['backup','⚙️','Ρυθμίσεις']];
+const MENU = [['z','🧮','Ζ ημέρας'], ['exp','🧾','Έξοδα'], ['fin','📊','Οικονομική εικόνα'], ['sup','🏭','Προμηθευτές'], ['tel','📞','Τηλέφωνα'], ['social','💬','Social'], ['backup','⚙️','Ρυθμίσεις']];
 const cur = () => MENU.some(m => m[0] === tab) ? 'menu' : tab;
 function vMenu(){
   return `<h2 style="margin-bottom:10px">Μενού</h2>` + MENU.map(([k, i, l]) => `<button class="item row" data-tab="${k}" style="width:100%;min-height:56px;color:var(--ink);cursor:pointer;text-align:left"><span class="t">${i} ${l}</span><span class="muted">›</span></button>`).join('');
@@ -369,6 +370,14 @@ function locOpen(){
   setTimeout(() => m.querySelector('#lq').focus(), 50);
 }
 
+/* ---------- Social ---------- */
+const postForm = () => `<form data-form="post" class="grid" style="margin-bottom:8px"><textarea class="full" name="text" rows="2" maxlength="500" placeholder="Γράψε κάτι για την ομάδα…" required></textarea><button class="primary">Δημοσίευση</button></form>`;
+const postRow = x => `<div class="item"><div class="row"><b>${esc(x.by || '—')}</b><span class="by">${dt(x.at)}</span></div><div style="margin-top:4px;overflow-wrap:anywhere">${esc(x.text).replace(/\n/g, '<br>')}</div>${canDel(x) ? `<div style="text-align:right;margin-top:4px">${delBtn('postDel', x)}</div>` : ''}</div>`;
+function vSocial(){
+  const l = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
+  return `<h2 style="margin-bottom:8px">Social</h2><div class="card">${postForm()}</div>` + (l.length ? `<div class="muted" style="margin:0 2px 8px">Τελευταίες ${l.length} αναρτήσεις (έως 200)</div>` + l.map(postRow).join('') : empty('Καμία ανάρτηση ακόμα.'));
+}
+
 /* ---------- Σήμερα ---------- */
 const OVERDUE_DAYS = 30;
 const daysAgo = d => Math.floor((Date.now() - new Date(d + 'T00:00:00')) / 864e5);
@@ -396,10 +405,8 @@ function vHome(){
   const taskRow = x => `<div class="item row"><div><div class="t">${esc(x.text)}${tag(x)}</div><div class="by">${x.date < t ? '<span class="badge bad">εκπρόθεσμη</span> ' : ''}${dd(x.date)}</div></div><div class="row"><button class="ok sm" data-act="taskDone" data-id="${x.id}" aria-label="Έγινε">✓</button>${delBtn('taskDel', x)}</div></div>`;
   const late = r => r.age > OVERDUE_DAYS ? `<span class="badge bad">${r.age} ημ.</span>` : r.age ? `<span class="by">${r.age} ημ.</span>` : '';
   let h = `<div class="card row" style="align-items:flex-start;flex-wrap:wrap"><div id="clock">${clockHtml()}</div><div id="wx" style="text-align:right">${wxHtml()}</div></div>`;
-  h += card('Τζίρος', `<div class="big">${zt.length ? eur(tz + tp) : '—'}</div><div class="muted">${zt.length ? `σήμερα · ταμειακή ${eur(tz)} · POS ${eur(tp)}` : 'Δεν έχει καταχωρηθεί Ζ σήμερα'}</div>
-    <div class="sum" style="margin-top:8px"><span>Προηγούμενη μέρα${pd ? ' (' + dd(pd) + ')' : ''}</span><b>${pd ? eur(ptot) : '—'}</b></div>
-    <div class="sum"><span>Τελευταίο Ζ${lz ? ' (' + dd(lz.date) + ')' : ''}</span><b>${lz ? eur((lz.z || 0) + (lz.pos || 0)) : '—'}</b></div>
-    <div class="sum" style="border:0"><span>Τελευταία καταμέτρηση${lc ? ' (' + dt(lc.at) + ')' : ''}</span><b>${lc ? eur(lc.amount) : '—'}</b></div>`, ['z', 'Ζ ημέρας']);
+  const recent = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 5);
+  h += card('Social', postForm() + (recent.length ? recent.map(postRow).join('') : empty('Καμία ανάρτηση ακόμα.')), S.posts.length > 5 ? ['social', 'Δες περισσότερα'] : null);
   h += card('Εργασίες σήμερα', `<form data-form="task" class="grid" style="margin-bottom:8px"><input class="full" name="text" placeholder="Νέα εργασία" required autocomplete="off"><input class="full" name="date" type="date" value="${t}" required aria-label="Ημερομηνία"><button class="primary">Προσθήκη</button></form>
     ${deliv.map(x => `<div class="item row" data-act="hsup" data-id="${x.id}" style="cursor:pointer" tabindex="0"><div class="t">🚚 Παράδοση σήμερα: ${esc(x.name)}</div></div>`).join('')}
     ${due.length ? due.map(taskRow).join('') : (deliv.length ? '' : empty('Καμία εργασία για σήμερα.'))}
@@ -612,7 +619,7 @@ function vBackup(){
     <button class="danger" data-act="wipe">Διαγραφή όλων των δεδομένων</button></div>`);
 }
 
-const VIEWS = {fin:vFin, menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
+const VIEWS = {social:vSocial, fin:vFin, menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
 
 function render(){
   renderHeader();
@@ -641,6 +648,11 @@ document.addEventListener('submit', ev => {
   if(kind === 'need' || kind === 'sneed'){
     const text = val(f, 'text'); if(S.needs.some(n => !n.done && pk(n.text) === pk(text))) return toast('Υπάρχει ήδη στη λίστα');
     S.needs.unshift({id:uid(), text, sups:kind === 'sneed' ? openSup : (val(f, 'sups') || undefined), by, at:now, done:false});
+  }
+  if(kind === 'post'){
+    const text = (f.get('text') || '').trim(); if(!text) return;
+    S.posts.unshift({id:uid(), text:text.slice(0, 500), by, at:now});
+    if(S.posts.length > 200) S.posts = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
   }
   if(kind === 'task') S.tasks.push({id:uid(), text:val(f, 'text'), date:f.get('date') || today(), done:false, by, at:now});
   if(kind === 'sup') S.suppliers.push({id:uid(), name:val(f, 'name'), phone:val(f, 'phone'), days:val(f, 'days'), by});
@@ -755,6 +767,7 @@ document.addEventListener('click', async ev => {
     case 'hdebt': jump('debt', {d:id}); return;
     case 'taskDone': { const x = S.tasks.find(i => i.id === id); x.done = !x.done; break; }
     case 'taskDel': delItem('tasks', id); return;
+    case 'postDel': delItem('posts', id); return;
     case 'gs': gsOpen(); return;
     case 'supOpen': openSup = id; supView = 'order'; q = ''; render(); window.scrollTo(0, 0); return;
     case 'supBack': openSup = null; render(); return;
@@ -805,7 +818,7 @@ document.addEventListener('input', ev => {
   if(ev.target.name === 'tags'){ const fm = ev.target.closest('form'); if(fm) syncTags(fm); }
 });
 /* ---------- Λογαριασμοί και συγχρονισμός (Firebase, REST) ---------- */
-const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay','tasks','settings'];
+const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay','tasks','settings','posts'];
 let remote = null, syncing = false, again = false, needRender = false, es = null, rp = null;
 const clone = o => JSON.parse(JSON.stringify(o));
 const toMap = arr => Object.fromEntries(arr.map(x => [x.id, x]));
@@ -821,7 +834,7 @@ function diff(a, b){
   });
   return out;
 }
-const typing = () => document.activeElement && document.activeElement.matches && document.activeElement.matches('input');
+const typing = () => document.activeElement && document.activeElement.matches && document.activeElement.matches('input,textarea');
 
 /* όνομα χρήστη -> εσωτερικό email (δουλεύει και με ελληνικά, τόνους, κεφαλαία) */
 const normName = n => n.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ς/g, 'σ');
