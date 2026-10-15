@@ -146,6 +146,7 @@ const normTags = s => { const seen = new Set(), out = []; String(s || '').split(
 const allTags = () => { const m = {}; S.products.forEach(p => tagsOf(p).forEach(t => { const k = norm(t); if(!m[k]) m[k] = t; })); return Object.values(m).sort((a, b) => a.localeCompare(b, 'el')); };
 const tagChips = cur => { const set = new Set(tagsOf({tags:cur}).map(norm)), l = allTags(); return l.length ? `<div class="tags full">${l.map(t => `<button type="button" class="chip tg ${set.has(norm(t)) ? 'on' : ''}" data-act="tagpick" data-id="${esc(t)}">${esc(t)}</button>`).join('')}</div>` : ''; };
 const syncTags = fm => { const inp = fm.querySelector('[name=tags]'), set = new Set(tagsOf({tags:inp.value}).map(norm)); fm.querySelectorAll('[data-act=tagpick]').forEach(c => c.classList.toggle('on', set.has(norm(c.dataset.id)))); };
+const ELAB = {need:'έλλειψη', cash:'καταμέτρηση ταμείου', z:'Ζ ημέρας', recv:'παραλαβή'};
 const today = () => toLocal(Date.now()).slice(0, 10);
 const srcOf = x => x && x.src === 'bank' ? 'bank' : 'cash';
 const srcLabel = k => k === 'bank' ? 'Τράπεζα' : 'Ταμείο (μετρητά)';
@@ -219,6 +220,8 @@ const editBtn = (act, x) => `<button class="chip sm" data-act="${act}" data-id="
 function delItem(col, id){
   const i = S[col].findIndex(x => x.id === id); if(i < 0) return;
   const [it] = S[col].splice(i, 1);
+  const dl = {needs:'έλλειψη', cash:'καταμέτρηση ταμείου', zs:'Ζ ημέρας', receipts:'παραλαβή'}[col];
+  if(dl) addNotif('admin', `${who() || 'Χρήστης'}: διέγραψε ${dl} «${it.text || it.name || (it.date ? dd(it.date) : eur(it.amount))}»`);
   save(); render();
   toast('Διαγράφηκε', {label:'Αναίρεση', fn:() => { S[col].push(it); save(); render(); }});
 }
@@ -232,7 +235,7 @@ const TABS = [
   ['needs','📝','Ελλείψεις'],
   ['menu','☰','Μενού'],
 ];
-const MENU = [['z','🧮','Ζ ημέρας'], ['exp','🧾','Έξοδα'], ['fin','📊','Οικονομική εικόνα'], ['sup','🏭','Προμηθευτές'], ['tel','📞','Τηλέφωνα'], ['social','💬','Social'], ['backup','⚙️','Ρυθμίσεις']];
+const MENU = [['z','🧮','Ζ ημέρας'], ['exp','🧾','Έξοδα'], ['fin','📊','Οικονομική εικόνα'], ['sup','🏭','Προμηθευτές'], ['tel','📞','Τηλέφωνα'], ['tasks','✅','Εργασίες'], ['social','💬','Social'], ['backup','⚙️','Ρυθμίσεις']];
 const cur = () => MENU.some(m => m[0] === tab) ? 'menu' : tab;
 function vMenu(){
   return `<h2 style="margin-bottom:10px">Μενού</h2>` + MENU.map(([k, i, l]) => `<button class="item row" data-tab="${k}" style="width:100%;min-height:56px;color:var(--ink);cursor:pointer;text-align:left"><span class="t">${i} ${l}</span><span class="muted">›</span></button>`).join('');
@@ -333,7 +336,9 @@ function wxHtml(){
   if(!l) return `<button class="ghost" data-act="wloc">☁️ Όρισε περιοχή για τον καιρό</button>`;
   if(!WX || WX.k !== l.lat + ',' + l.lon) return `<span class="muted">Καιρός: φόρτωση…</span> <button class="chip tg" data-act="wloc">Αλλαγή</button>`;
   const [ic, tx] = WC(WX.code);
-  return `<span style="font-size:30px;line-height:1">${ic}</span> <b style="font-size:26px">${Math.round(WX.temp)}°C</b><div class="muted">${tx} · βροχή ${WX.pop ?? '—'}%${WX.max != null ? ' (σήμερα έως ' + WX.max + '%)' : ''}<br>${esc(l.name)} · ${new Date(WX.at).toLocaleTimeString('el-GR', {hour:'2-digit', minute:'2-digit'})} <button class="chip tg" data-act="wloc">Αλλαγή</button></div>`;
+  return `<div class="row" style="justify-content:flex-start;gap:10px"><span style="font-size:34px;line-height:1">${ic}</span><b style="font-size:28px">${Math.round(WX.temp)}°C</b><div class="muted">${tx}<br>βροχή ${WX.pop ?? '—'}%${WX.max != null ? ' · σήμερα έως ' + WX.max + '%' : ''}</div></div>
+  ${(WX.nx || []).length ? `<div style="display:flex;gap:6px;margin-top:8px">${WX.nx.map(h => `<div style="flex:1;text-align:center;background:var(--bg);border-radius:10px;padding:6px 2px"><div class="by">${esc(h.t)}</div><div style="font-size:22px;line-height:1.3">${WC(h.code)[0]}</div><b>${Math.round(h.temp)}°</b><div class="by">${h.pop ?? '—'}%</div></div>`).join('')}</div>` : ''}
+  <div class="by" style="margin-top:6px">${esc(l.name)} · ενημερώθηκε ${new Date(WX.at).toLocaleTimeString('el-GR', {hour:'2-digit', minute:'2-digit'})} <button class="chip tg" data-act="wloc">Αλλαγή</button></div>`;
 }
 function tickClock(){
   const el = $('#clock'); if(el) el.innerHTML = clockHtml();
@@ -341,11 +346,11 @@ function tickClock(){
 }
 async function fetchWx(force){
   const l = getLoc(); if(!l || !navigator.onLine) return;
-  const k = l.lat + ',' + l.lon; if(!force && WX && WX.k === k && Date.now() - WX.at < 600000) return;
+  const k = l.lat + ',' + l.lon; if(!force && WX && WX.k === k && WX.nx && Date.now() - WX.at < 500000) return;
   try{
-    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${l.lat}&longitude=${l.lon}&current=temperature_2m,weather_code&hourly=precipitation_probability&daily=precipitation_probability_max&forecast_days=1&timezone=auto`)).json();
+    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${l.lat}&longitude=${l.lon}&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code,precipitation_probability&daily=precipitation_probability_max&forecast_days=2&timezone=auto`)).json();
     const h = j.hourly.time.findIndex(x => x.slice(0, 13) === j.current.time.slice(0, 13));
-    WX = {k, temp:j.current.temperature_2m, code:j.current.weather_code, pop:h >= 0 ? j.hourly.precipitation_probability[h] : null, max:j.daily.precipitation_probability_max[0], at:Date.now()};
+    WX = {k, temp:j.current.temperature_2m, code:j.current.weather_code, pop:h >= 0 ? j.hourly.precipitation_probability[h] : null, max:j.daily.precipitation_probability_max[0], at:Date.now(), nx:h >= 0 ? [1, 2, 3, 4, 5].map(i => ({t:(j.hourly.time[h + i] || '').slice(11, 16), temp:j.hourly.temperature_2m[h + i], code:j.hourly.weather_code[h + i], pop:j.hourly.precipitation_probability[h + i]})).filter(x => x.t) : []};
     try{ localStorage.setItem('peripteros-wx', JSON.stringify(WX)); }catch(e){}
     const el = $('#wx'); if(el) el.innerHTML = wxHtml();
   }catch(e){}
@@ -409,6 +414,14 @@ function vSocial(){
   return `<h2 style="margin-bottom:8px">Social</h2><div class="card">${postForm()}</div>` + (l.length ? `<div class="muted" style="margin:0 2px 8px">Τελευταίες ${l.length} αναρτήσεις (έως 200)</div>` + l.map(postRow).join('') : empty('Καμία ανάρτηση ακόμα.'));
 }
 
+/* ---------- Εργασίες ---------- */
+const taskForm = () => `<form data-form="task" class="grid" style="margin-bottom:8px"><input class="full" name="text" placeholder="Νέα εργασία" required autocomplete="off"><input class="full" name="date" type="date" value="${today()}" required aria-label="Ημερομηνία"><select class="full" name="as" aria-label="Ανάθεση σε χρήστη"><option value="">— Για όλους —</option>${S.members.map(m => `<option value="${esc(m.id)}">@${esc(m.name)}${m.id === me() ? ' (εγώ)' : ''}</option>`).join('')}</select><button class="primary">Προσθήκη</button></form>`;
+const taskItem = x => `<div class="item row ${x.done ? 'done' : ''}"><div><div class="t">${esc(x.text)}${tag(x)}</div><div class="by">${!x.done && x.date < today() ? '<span class="badge bad">εκπρόθεσμη</span> ' : ''}${dd(x.date)}${x.as ? ' · @' + esc(memName(x.as)) : ''}</div></div><div class="row"><button class="${x.done ? 'chip sm' : 'ok sm'}" data-act="taskDone" data-id="${x.id}" aria-label="${x.done ? 'Επαναφορά' : 'Έγινε'}">${x.done ? '↩' : '✓'}</button>${delBtn('taskDel', x)}</div></div>`;
+function vTasks(){
+  const open = S.tasks.filter(x => !x.done).sort((a, b) => a.date.localeCompare(b.date)), done = S.tasks.filter(x => x.done).sort((a, b) => b.at - a.at).slice(0, 10);
+  return `<h2 style="margin-bottom:8px">Εργασίες</h2><div class="card">${taskForm()}</div>` + (open.length ? open.map(taskItem).join('') : empty('Καμία εργασία.')) + (done.length ? `<h2 class="muted" style="font-size:15px;margin-top:14px">Ολοκληρώθηκαν</h2>` + done.map(taskItem).join('') : '');
+}
+
 /* ---------- Σήμερα ---------- */
 const OVERDUE_DAYS = 30;
 const daysAgo = d => Math.floor((Date.now() - new Date(d + 'T00:00:00')) / 864e5);
@@ -433,15 +446,15 @@ function vHome(){
   const dl = S.debtors.map(c => ({c, ...debtorAge(c)})).filter(r => r.bal > 0.005).sort((a, b) => b.age - a.age);
   const sl = S.suppliers.map(x => ({x, ...supAge(x)})).filter(r => r.bal > 0.005).sort((a, b) => b.age - a.age);
   const card = (h, inner, more) => `<div class="card"><h2>${h}</h2>${inner}${more ? `<button class="ghost" data-act="jumpTab" data-id="${more[0]}" style="width:100%;margin-top:4px">${more[1]}</button>` : ''}</div>`;
-  const taskRow = x => `<div class="item row"><div><div class="t">${esc(x.text)}${tag(x)}</div><div class="by">${x.date < t ? '<span class="badge bad">εκπρόθεσμη</span> ' : ''}${dd(x.date)}</div></div><div class="row"><button class="ok sm" data-act="taskDone" data-id="${x.id}" aria-label="Έγινε">✓</button>${delBtn('taskDel', x)}</div></div>`;
+  const taskRow = taskItem;
   const late = r => r.age > OVERDUE_DAYS ? `<span class="badge bad">${r.age} ημ.</span>` : r.age ? `<span class="by">${r.age} ημ.</span>` : '';
-  let h = `<div class="card row" style="align-items:flex-start;flex-wrap:wrap"><div id="clock">${clockHtml()}</div><div id="wx" style="text-align:right">${wxHtml()}</div></div>`;
+  let h = `<div class="card"><div id="clock">${clockHtml()}</div><div id="wx" style="margin-top:10px">${wxHtml()}</div></div>`;
   const recent = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 5);
   h += card('Social', postForm() + (recent.length ? recent.map(postRow).join('') : empty('Καμία ανάρτηση ακόμα.')), S.posts.length > 5 ? ['social', 'Δες περισσότερα'] : null);
-  h += card('Εργασίες σήμερα', `<form data-form="task" class="grid" style="margin-bottom:8px"><input class="full" name="text" placeholder="Νέα εργασία" required autocomplete="off"><input class="full" name="date" type="date" value="${t}" required aria-label="Ημερομηνία"><button class="primary">Προσθήκη</button></form>
+  h += card('Εργασίες σήμερα', `${taskForm()}
     ${deliv.map(x => `<div class="item row" data-act="hsup" data-id="${x.id}" style="cursor:pointer" tabindex="0"><div class="t">🚚 Παράδοση σήμερα: ${esc(x.name)}</div></div>`).join('')}
     ${due.length ? due.map(taskRow).join('') : (deliv.length ? '' : empty('Καμία εργασία για σήμερα.'))}
-    ${later.length ? `<h2 class="muted" style="font-size:14px;margin:10px 0 4px">Επόμενες</h2>` + later.map(taskRow).join('') : ''}`);
+    ${later.length ? `<h2 class="muted" style="font-size:14px;margin:10px 0 4px">Επόμενες</h2>` + later.map(taskRow).join('') : ''}`, ['tasks', 'Όλες οι εργασίες']);
   h += card(`Εκκρεμείς παραγγελίες (${ord.length})`, ord.length ? ord.slice(0, 8).map(n => { const ss = needSups(n).map(id => S.suppliers.find(x => x.id === id)), sp = ss[0], nd = ss.map(x => nextDelivery(x)).find(Boolean) || '';
     return `<div class="item row" ${sp ? `data-act="hsup" data-id="${sp.id}" style="cursor:pointer" tabindex="0"` : ''}><div><div class="t">${esc(n.text)}</div><div class="by">${ss.length ? esc(ss.map(x => x.name).join(', ')) : 'χωρίς προμηθευτή'}${n.od ? ' · ' + dd(toLocal(n.od).slice(0, 10)) : ''}${nd ? ' · αναμένεται ' + nd : ''}</div></div></div>`; }).join('') : empty('Καμία εκκρεμής παραγγελία.'), ord.length > 8 ? ['needs', 'Όλες οι ελλείψεις'] : null);
   h += card(`Προϊόντα που τελειώνουν (${open.length})`, open.length ? open.slice(0, 8).map(n => `<div class="item row"><div class="t">${esc(n.text)}${needSups(n).map(id => ` <span class="badge">${esc(supName(id))}</span>`).join('')}</div></div>`).join('') : empty('Δεν λείπει τίποτα.'), open.length ? ['needs', 'Ελλείψεις'] : null);
@@ -618,6 +631,7 @@ async function editItem(kind, id){
     if(!v) return; const a = num(v.amount); if(a == null) return toast('Βάλε ποσό');
     x.cat = v.cat; x.note = v.note; x.date = v.date || x.date; x.amount = a; x.src = v.src === 'bank' ? 'bank' : 'cash';
   }
+  if(ELAB[kind]) addNotif('admin', `${who() || 'Χρήστης'}: άλλαξε ${ELAB[kind]} «${x.text || x.name || (x.date ? dd(x.date) : eur(x.amount))}»`);
   x.ed = who(); save(); render(); toast('Αποθηκεύτηκε');
 }
 
@@ -651,7 +665,7 @@ function vBackup(){
     <button class="danger" data-act="wipe">Διαγραφή όλων των δεδομένων</button></div>`);
 }
 
-const VIEWS = {social:vSocial, fin:vFin, menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
+const VIEWS = {tasks:vTasks, social:vSocial, fin:vFin, menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
 
 function render(){
   renderHeader();
@@ -689,7 +703,11 @@ document.addEventListener('submit', ev => {
     tg.forEach(id => addNotif(id, `${by || 'Κάποιος'} σε επισήμανε σε μια ανάρτηση`));
     if(S.posts.length > 200) S.posts = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
   }
-  if(kind === 'task') S.tasks.push({id:uid(), text:val(f, 'text'), date:f.get('date') || today(), done:false, by, at:now});
+  if(kind === 'task'){
+    const as = val(f, 'as'), text = val(f, 'text');
+    S.tasks.push({id:uid(), text, date:f.get('date') || today(), as:as || undefined, done:false, by, at:now});
+    if(as && as !== me()) addNotif(as, `${by || 'Κάποιος'} σου ανέθεσε εργασία: «${text}»`);
+  }
   if(kind === 'sup') S.suppliers.push({id:uid(), name:val(f, 'name'), phone:val(f, 'phone'), days:val(f, 'days'), by});
   if(kind === 'sprice') S.sprices.push({id:uid(), supplier:openSup, name:val(f, 'name'), price:num(f.get('price')), by});
   if(kind === 'spay'){
@@ -717,6 +735,7 @@ document.addEventListener('submit', ev => {
     const a = num(f.get('amount')), tot = num(f.get('total'));
     if(!val(f, 'supplier')) return toast('Διάλεξε προμηθευτή'); if(tot == null) return toast('Βάλε αξία τιμολογίου'); if(a == null) return toast('Βάλε ποσό που πλήρωσες');
     S.receipts.push({id:uid(), name:val(f, 'name'), supplier:val(f, 'supplier'), total:tot, date:f.get('date') || today(), amount:a, src:f.get('src') === 'bank' ? 'bank' : 'cash', by, at:now});
+    addNotif('admin', `${by || 'Χρήστης'}: νέα παραλαβή ${eur(a)}${supName(val(f, 'supplier')) ? ' (' + supName(val(f, 'supplier')) + ')' : ''}`);
   }
   if(kind === 'z'){
     const a = num(f.get('z')); if(a == null) return toast('Βάλε το Ζ της ταμειακής');
@@ -738,7 +757,7 @@ document.addEventListener('click', async ev => {
   const a = b.dataset.act, id = b.dataset.id;
   if(a.endsWith('Edit')) return editItem(a.slice(0, -4), id);
   switch(a){
-    case 'needDone': { const n = S.needs.find(x => x.id === id); n.done = !n.done; n.od = n.done ? Date.now() : null; n.rcv = null; break; }
+    case 'needDone': { const n = S.needs.find(x => x.id === id); n.done = !n.done; n.od = n.done ? Date.now() : null; n.rcv = null; addNotif('admin', `${who() || 'Χρήστης'}: ${n.done ? 'παραγγέλθηκε' : 'επαναφορά στις ελλείψεις'}: «${n.text}»`); break; }
     case 'needDel': delItem('needs', id); return;
     case 'needClear': if(!await ask('Να σβηστούν οι παραληφθείσες;')) return; S.needs = S.needs.filter(n => !n.rcv); break;
     case 'needCopy': {
@@ -776,7 +795,7 @@ document.addEventListener('click', async ev => {
       inp.value = (cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id]).join(',');
       fm.querySelectorAll('[data-act=suppick]').forEach(c => c.classList.toggle('on', inp.value.split(',').includes(c.dataset.id))); return;
     }
-    case 'needRcv': { const n = S.needs.find(x => x.id === id); n.done = true; n.rcv = Date.now(); break; }
+    case 'needRcv': { const n = S.needs.find(x => x.id === id); n.done = true; n.rcv = Date.now(); addNotif('admin', `${who() || 'Χρήστης'}: παραλήφθηκε «${n.text}»`); break; }
     case 'needUndoRcv': { const n = S.needs.find(x => x.id === id); n.rcv = null; break; }
     case 'wloc': locOpen(); return;
     case 'tagmore': tagsAll = !tagsAll; render(); return;
@@ -1069,7 +1088,7 @@ document.addEventListener('visibilitychange', () => { if(!document.hidden) sync(
 
 boot();
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
-tickClock(); fetchWx(); setInterval(tickClock, 1000); setInterval(() => fetchWx(), 900000); addEventListener('online', () => fetchWx());
+tickClock(); fetchWx(); setInterval(tickClock, 1000); setInterval(() => fetchWx(), 600000); addEventListener('online', () => fetchWx());
 setInterval(() => { if(purgeNeeds() && !typing()) render(); }, 600000);
 
 /* ---------- Καθολική αναζήτηση ---------- */
