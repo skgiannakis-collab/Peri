@@ -56,13 +56,13 @@ nav button.on{color:var(--ink);background:var(--card);box-shadow:var(--hi),0 0 0
 nav button.on::after{content:"";display:block;width:16px;height:3px;margin:2px auto 0;border-radius:3px;background:var(--ig)}
 @media(min-width:700px){
   nav{left:0;right:auto;top:0;bottom:0;width:var(--nw);flex-direction:column;gap:6px;overflow-y:auto;border-radius:0 30px 30px 0;border-left:0;padding:calc(14px + env(safe-area-inset-top,0px)) 8px 14px}
-  nav button{width:100%;min-height:64px}
+  nav button{flex:0 0 auto;width:100%;min-height:64px}
   main{padding-bottom:48px}
   #toast{bottom:24px!important}
   .modal{align-items:center!important}
   .sheet{border-radius:28px!important;border-bottom:1px solid var(--gb)!important}.sheet::before{display:none!important}
 }
-@media(min-width:900px){body[data-tab="home"] main{max-width:1040px;column-count:2;column-gap:16px}}
+@media(min-width:900px){body[data-view="home"] main{max-width:1040px;column-count:2;column-gap:16px}}
 @media(min-width:1100px){
   nav{padding-top:calc(24px + env(safe-area-inset-top,0px))}
   nav button{display:flex;align-items:center;justify-content:flex-start;gap:14px;font-size:15px;text-align:left;padding:10px 18px;min-height:54px}
@@ -743,7 +743,7 @@ function vBackup(){
 const VIEWS = {tasks:vTasks, social:vSocial, fin:vFin, menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
 
 function render(){
-  document.body.dataset.tab = tab;
+  document.body.dataset.view = tab;
   renderHeader();
   if(AUTH && !session){ $('#main').innerHTML = loginView(); $('#nav').innerHTML = ''; return; }
   $('#main').innerHTML = (MENU.some(m => m[0] === tab) ? '<button class="ghost" data-tab="menu" style="margin-bottom:10px">← Μενού</button>' : '') + VIEWS[tab]();
