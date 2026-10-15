@@ -3,16 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1f5c4a">
+<meta name="theme-color" content="#25634f">
 <title>Περίπτερο</title>
 <style>
 :root{
-  --bg:#eef1ec;--card:#ffffff;--ink:#1b2421;--mut:#5f6f69;--line:#d3dbd5;
-  --g:#1f5c4a;--onp:#ffffff;--amb:#f2a900;--red:#c4402f;--ok:#2e7d4f;
+  color-scheme:dark;
+  --bg:#0d1410;--card:#16201b;--ink:#dce6e0;--mut:#8b9c94;--line:#25322b;
+  --g:#25634f;--a:#5fbf9b;--onp:#e9f4ee;--amb:#f2a900;--red:#e0705f;--ok:#5fc08a;
   --font:"Trebuchet MS","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-}
-@media (prefers-color-scheme:dark){
-  :root{--bg:#111a17;--card:#1a2521;--ink:#e8efeb;--mut:#93a39c;--line:#2a3933;--g:#58b895;--onp:#0d1613;--red:#e0705f;--ok:#5fc08a}
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -21,14 +19,14 @@ header{position:sticky;top:0;z-index:5;display:flex;gap:12px;align-items:center;
   background:var(--g);color:var(--onp);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));margin-top:calc(-1*env(safe-area-inset-top,0px))}
 .brand{font-weight:700;font-size:19px;letter-spacing:.2px}
 .who{display:flex;align-items:center;gap:8px;font-size:14px}
-.who input{width:130px;min-height:38px;border:0;border-radius:8px;padding:6px 10px;font:inherit;font-size:16px;background:rgba(255,255,255,.95);color:#1b2421}
+.who input{width:130px;min-height:38px;border:0;border-radius:8px;padding:6px 10px;font:inherit;font-size:16px;background:rgba(255,255,255,.1);color:var(--onp)}
 main{max-width:720px;margin:0 auto;padding:12px 12px calc(96px + env(safe-area-inset-bottom,0px))}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;overflow-x:auto;background:var(--card);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
 nav button{flex:1 0 auto;min-width:78px;min-height:62px;background:none;border:0;border-top:3px solid transparent;color:var(--mut);font:inherit;font-size:12px;padding:6px 8px;cursor:pointer}
 nav button b{display:block;font-size:22px;line-height:1.2;font-weight:400}
-nav button.on{color:var(--g);border-top-color:var(--amb);font-weight:700}
+nav button.on{color:var(--a);border-top-color:var(--amb);font-weight:700}
 h2{margin:0 0 4px;font-size:20px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -38,9 +36,9 @@ input:focus,button:focus-visible{outline:3px solid var(--amb);outline-offset:1px
 button{font:inherit;cursor:pointer}
 .primary,.ok,.danger,.ghost,.chip{min-height:48px;border-radius:10px;border:1px solid transparent;padding:8px 14px;font-weight:700}
 .primary{background:var(--g);color:var(--onp)}
-.ok{background:var(--ok);color:#fff}
+.ok{background:#2a7a4b;color:#fff}
 .danger{background:none;color:var(--red);border-color:var(--red)}
-.ghost{background:none;color:var(--g);border-color:var(--line)}
+.ghost{background:none;color:var(--a);border-color:var(--line)}
 .chip{min-height:40px;background:var(--card);border-color:var(--line);color:var(--ink);font-weight:400}
 .chip.on{background:var(--g);color:var(--onp);border-color:var(--g)}
 .row{display:flex;align-items:center;gap:10px;justify-content:space-between}
@@ -55,18 +53,18 @@ button{font:inherit;cursor:pointer}
 .pos{color:var(--ok)}
 .badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700;background:var(--line);color:var(--ink)}
 .badge.warn{background:var(--amb);color:#1b2421}
-.badge.bad{background:var(--red);color:#fff}
+.badge.bad{background:#b83a2a;color:#fff}
 .done .t{text-decoration:line-through;color:var(--mut)}
 .empty{text-align:center;color:var(--mut);padding:28px 8px}
 .stock{min-width:118px}
 .stock.out{background:var(--red);color:#fff}
 .stock.in{background:var(--ok);color:#fff}
-#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1b2421;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;max-width:90%}
+#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#2b3b34;color:#eef5f1;border:1px solid var(--line);padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;max-width:90%}
 #toast.show{opacity:1}
-a{color:var(--g);font-weight:700}
+a{color:var(--a);font-weight:700}
 .sync{font-size:12px;opacity:.9}
 .who button{min-height:38px;border:0;border-radius:8px;padding:6px 12px;background:rgba(255,255,255,.2);color:inherit;font-weight:700}
-.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--card);color:var(--ink);width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto}
 .sheet p{margin:0 0 14px}
 .fld{display:block;margin-bottom:10px;font-size:14px;color:var(--mut)}
@@ -84,7 +82,7 @@ a{color:var(--g);font-weight:700}
 </head>
 <body>
 <header>
-  <div><div class="brand">Περίπτερο 2.0</div><div id="sync" class="sync"></div></div>
+  <div><div class="brand">Περίπτερο</div><div id="sync" class="sync"></div></div>
   <div id="hdr" class="who"></div>
 </header>
 <main id="main"></main>
@@ -111,7 +109,7 @@ function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStor
 let S = load();
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Δεν έγινε αποθήκευση!'); } sync(); }
 
-let tab = 'home', hideAmts = false, tagsAll = false, needsView = 'list', openDebtor = null, editId = null, q = '', ptag = '', repPeriod = 'month', cashView = 'count';
+let tab = 'home', hideAmts = (() => { try{ return localStorage.getItem('peripteros-blur') === '1'; }catch(e){ return false; } })(), tagsAll = false, needsView = 'list', openDebtor = null, editId = null, q = '', ptag = '', repPeriod = 'month', cashView = 'count';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -144,14 +142,17 @@ const tagChips = cur => { const set = new Set(tagsOf({tags:cur}).map(norm)), l =
 const syncTags = fm => { const inp = fm.querySelector('[name=tags]'), set = new Set(tagsOf({tags:inp.value}).map(norm)); fm.querySelectorAll('[data-act=tagpick]').forEach(c => c.classList.toggle('on', set.has(norm(c.dataset.id)))); };
 const today = () => toLocal(Date.now()).slice(0, 10);
 const srcOf = x => x && x.src === 'bank' ? 'bank' : 'cash';
-const srcLabel = k => k === 'bank' ? 'Τράπεζα (POS)' : 'Ταμείο (μετρητά)';
-const srcOpts = [['cash', 'Πληρώθηκε από το ταμείο (μετρητά)'], ['bank', 'Πληρώθηκε από τράπεζα (POS)']];
+const srcLabel = k => k === 'bank' ? 'Τράπεζα' : 'Ταμείο (μετρητά)';
+const srcOpts = [['cash', 'Πληρώθηκε από το ταμείο (μετρητά)'], ['bank', 'Πληρώθηκε από τράπεζα']];
 const srcSelect = () => `<select class="full" name="src" aria-label="Πηγή πληρωμής">${srcOpts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`;
 const EXPCATS = ['Μισθοί', 'ΔΕΗ', 'ΟΤΕ / Internet', 'Νερό', 'Ενοίκιο', 'Φόροι / Ασφαλιστικά', 'Λογιστής', 'Άλλο'];
 const supName = id => (S.suppliers.find(x => x.id === id) || {}).name || '';
 const supSelect = req => `<select class="full" name="supplier" aria-label="Προμηθευτής" ${req ? 'required' : ''}><option value="">${req ? '— Διάλεξε προμηθευτή —' : '— Προμηθευτής (προαιρετικό) —'}</option>${S.suppliers.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select>`;
 const supIds = n => [...new Set([n.supplier, ...String(n.sups || '').split(',')].filter(Boolean))];
-const supChips = cur => { const set = new Set(String(cur || '').split(',').filter(Boolean)); return S.suppliers.length ? `<input type="hidden" name="sups" value="${esc([...set].join(','))}"><div class="tags full">${S.suppliers.map(x => `<button type="button" class="chip tg ${set.has(x.id) ? 'on' : ''}" data-act="suppick" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>` : ''; };
+let supAll = false;
+const supRank = () => { const c = {}; S.needs.forEach(n => supIds(n).forEach(id => c[id] = (c[id] || 0) + 1)); return [...S.suppliers].sort((a, b) => (c[b.id] || 0) - (c[a.id] || 0) || a.name.localeCompare(b.name, 'el')); };
+const supChipsInner = (set, all) => { const l = supRank(); return l.filter((x, i) => all || i < 5 || set.has(x.id)).map(x => `<button type="button" class="chip tg ${set.has(x.id) ? 'on' : ''}" data-act="suppick" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join('') + (l.length > 5 ? `<button type="button" class="chip tg" data-act="supmore">${all ? 'Εμφάνιση λιγότερων' : 'Εμφάνιση όλων'}</button>` : ''); };
+const supChips = cur => { const set = new Set(String(cur || '').split(',').filter(Boolean)); return S.suppliers.length ? `<input type="hidden" name="sups" value="${esc([...set].join(','))}"><div class="tags full" data-supwrap>${supChipsInner(set, supAll)}</div>` : ''; };
 const needSups = n => { const k = pk(n.text), ids = supIds(n); if(k) S.sprices.forEach(x => { if(pk(x.name) === k && !ids.includes(x.supplier)) ids.push(x.supplier); }); return ids.filter(id => supName(id)); };
 const supOpts = () => [['', '— χωρίς προμηθευτή —'], ...S.suppliers.map(x => [x.id, x.name])];
 const supBal = id => S.receipts.filter(r => r.supplier === id).reduce((t, r) => t + ((r.total ?? r.amount) || 0) - (r.amount || 0), 0) - S.spay.filter(p => p.supplier === id).reduce((t, p) => t + (p.amount || 0), 0);
@@ -406,7 +407,7 @@ function vHome(){
 /* ---------- Προμηθευτές ---------- */
 function recvForm(sid){
   return (!sid && !S.suppliers.length ? '<p class="muted">Πρόσθεσε πρώτα προμηθευτή (☰ Μενού → Προμηθευτές).</p>' : '') + `<form data-form="recv" class="card grid">
-    <input class="full" name="name" placeholder="Όνομα παραλαβής / αρ. τιμολογίου (προαιρετικό)" autocomplete="off">
+    <input class="full" name="name" placeholder="Όνομα παραλαβής / αρ. τιμολογίου" autocomplete="off">
     ${sid ? `<input type="hidden" name="supplier" value="${esc(sid)}">` : supSelect(true)}
     <input class="full" name="date" type="date" value="${today()}" required aria-label="Ημερομηνία">
     <input name="total" inputmode="decimal" placeholder="Αξία τιμολογίου €" required autocomplete="off">
@@ -553,7 +554,7 @@ async function editItem(kind, id){
     if(!v) return; x.name = v.name; x.price = num(v.price); x.tags = normTags(v.tags);
   }
   if(kind === 'recv'){
-    v = await formModal('Επεξεργασία παραλαβής', [{name:'name', label:'Όνομα παραλαβής / τιμολόγιο (προαιρετικό)'}, {name:'supplier', label:'Προμηθευτής', options:supOpts()}, {name:'date', label:'Ημερομηνία', type:'date', required:1}, {name:'total', label:'Αξία τιμολογίου €', inputmode:'decimal', required:1}, {name:'amount', label:'Ποσό που πλήρωσα €', inputmode:'decimal', required:1}, {name:'src', label:'Πληρώθηκε από', options:srcOpts}], {name:x.name, supplier:x.supplier || '', date:x.date, total:x.total ?? x.amount, amount:x.amount, src:srcOf(x)});
+    v = await formModal('Επεξεργασία παραλαβής', [{name:'name', label:'Όνομα παραλαβής / αρ. τιμολογίου'}, {name:'supplier', label:'Προμηθευτής', options:supOpts()}, {name:'date', label:'Ημερομηνία', type:'date', required:1}, {name:'total', label:'Αξία τιμολογίου €', inputmode:'decimal', required:1}, {name:'amount', label:'Ποσό που πλήρωσα €', inputmode:'decimal', required:1}, {name:'src', label:'Πληρώθηκε από', options:srcOpts}], {name:x.name, supplier:x.supplier || '', date:x.date, total:x.total ?? x.amount, amount:x.amount, src:srcOf(x)});
     if(!v) return; const a = num(v.amount); if(a == null) return toast('Βάλε ποσό');
     if(!v.supplier) return toast('Διάλεξε προμηθευτή'); const t = num(v.total); if(t == null) return toast('Βάλε αξία τιμολογίου'); x.name = v.name; x.supplier = v.supplier; x.total = t; x.date = v.date || x.date; x.amount = a; x.src = v.src === 'bank' ? 'bank' : 'cash';
   }
@@ -701,6 +702,10 @@ document.addEventListener('click', async ev => {
     case 'zDel': delItem('zs', id); return;
     case 'expDel': delItem('expenses', id); return;
     case 'cview': cashView = id; render(); return;
+    case 'supmore': {
+      const fm = b.closest('form'), inp = fm.querySelector('[name=sups]'); supAll = !supAll;
+      fm.querySelector('[data-supwrap]').innerHTML = supChipsInner(new Set(inp.value.split(',').filter(Boolean)), supAll); return;
+    }
     case 'suppick': {
       const fm = b.closest('form'), inp = fm.querySelector('[name=sups]'), cur = inp.value.split(',').filter(Boolean);
       inp.value = (cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id]).join(',');
@@ -728,7 +733,7 @@ document.addEventListener('click', async ev => {
       S.needs.unshift({id:uid(), text:x.name, by:who(), at:Date.now(), done:false});
       save(); render(); toast('Προστέθηκε στις ελλείψεις'); return;
     }
-    case 'blur': hideAmts = !hideAmts; render(); return;
+    case 'blur': hideAmts = !hideAmts; try{ localStorage.setItem('peripteros-blur', hideAmts ? '1' : '0'); }catch(e){} render(); return;
     case 'jumpTab': go(id); return;
     case 'hsup': jump('sup', {s:id, v:b.dataset.v}); return;
     case 'hdebt': jump('debt', {d:id}); return;
