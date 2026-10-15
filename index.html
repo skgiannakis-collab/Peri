@@ -509,8 +509,8 @@ function vSup(){
       (S.spay.filter(p => p.supplier === id).length ? by(S.spay.filter(p => p.supplier === id)).map(p => `<div class="item row"><div><div class="t">${dd(p.date)}${tag(p)}</div><div class="by">${srcLabel(srcOf(p))}</div></div><div class="row"><b class="price">${eur(p.amount)}</b>${delBtn('spayDel', p)}</div></div>`).join('') : empty('Καμία πληρωμή.'));
     if(supView === 'prices'){
       const pl = S.sprices.filter(x => x.supplier === id && match(x.name)).sort((a, b) => a.name.localeCompare(b.name, 'el'));
-      body = `<form data-form="sprice" class="card grid"><input class="full" name="name" placeholder="Προϊόν που φέρνει" required autocomplete="off"><input class="full" name="price" inputmode="decimal" placeholder="Τιμή € (προαιρετικά)" autocomplete="off"><button class="primary">Προσθήκη προϊόντος</button></form><input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">` +
-        (pl.length ? pl.map(x => `<div class="item row"><div><div class="t">${esc(x.name)}${tag(x)}</div><button class="chip" data-act="needAdd" data-id="${x.id}" style="margin-top:6px">${inNeeds(x.name) ? '✓ Στις ελλείψεις' : '＋ Ελλείψεις'}</button></div><div class="row"><b class="price">${x.price != null ? eur(x.price) : '—'}</b>${editBtn('spriceEdit', x)}${delBtn('spriceDel', x)}</div></div>`).join('') : empty('Κανένα προϊόν.'));
+      body = `<form data-form="sprice" class="card grid"><input class="full" name="name" placeholder="Προϊόν που φέρνει" required autocomplete="off"><input class="full" name="price" inputmode="decimal" placeholder="Τιμή αγοράς (χονδρική) € (προαιρετικά)" autocomplete="off"><button class="primary">Προσθήκη προϊόντος</button></form><input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">` +
+        (pl.length ? pl.map(x => `<div class="item row"><div><div class="t">${esc(x.name)}${tag(x)}</div>${supProfit(x)}<button class="chip" data-act="needAdd" data-id="${x.id}" style="margin-top:6px">${inNeeds(x.name) ? '✓ Στις ελλείψεις' : '＋ Ελλείψεις'}</button></div><div class="row"><b class="price">${x.price != null ? eur(x.price) : '—'}</b>${editBtn('spriceEdit', x)}${delBtn('spriceDel', x)}</div></div>`).join('') : empty('Κανένα προϊόν.'));
     }
     return `<button class="ghost" data-act="supBack" style="margin-bottom:10px">← Προμηθευτές</button>
     <div class="card"><div class="row"><h2>${esc(sp.name)}</h2>${editBtn('supEdit', sp)}</div>
@@ -563,6 +563,12 @@ function reportCard(){
   const cats = {}; ex.forEach(e => cats[e.cat] = (cats[e.cat] || 0) + (e.amount || 0));
   const cl = Object.entries(cats).sort((a, b) => b[1] - a[1]);
   const row = (l, v, cls = '', sub = false) => `<div class="sum"${sub ? ' style="padding-left:14px"' : ''}><span class="${sub ? 'by' : ''}">${l}</span><b class="${cls}">${eur(v)}</b></div>`;
+  const pp = S.products.filter(p => p.price > 0 && costOf(p) != null), sp0 = pp.reduce((t, p) => t + p.price, 0), mg = sp0 ? pp.reduce((t, p) => t + p.price - costOf(p), 0) / sp0 : null;
+  const profit = mg == null ? '' : `<h2 class="muted" style="font-size:15px;margin:12px 0 4px">Κέρδος (εκτίμηση)</h2>
+    <div class="sum"><span>Μέσο περιθώριο (${pp.length} προϊόντα)</span><b>${pf(mg * 100)}</b></div>
+    ${row('Μικτό κέρδος πωλήσεων', I * mg, I * mg >= 0 ? 'pos' : 'owe')}
+    ${row('Καθαρό κέρδος (μετά τα έξοδα)', I * mg - X, I * mg - X >= 0 ? 'pos' : 'owe')}
+    <p class="muted" style="margin:4px 0 0">Τζίρος Ζ × μέσο περιθώριο των προϊόντων με τιμή αγοράς. Δεν γνωρίζει ποια προϊόντα πουλήθηκαν.</p>`;
   return `<div class="card"><h2>Οικονομική εικόνα</h2>
     <div class="tools" style="margin-top:8px">${[['day', 'Σήμερα'], ['month', 'Μήνας'], ['year', 'Έτος'], ['all', 'Όλα']].map(([k, l]) => `<button class="chip ${repPeriod === k ? 'on' : ''}" data-act="rep" data-id="${k}">${l}</button>`).join('')}</div>
     ${row(`Έσοδα (Ζ, ${zs.length})`, I, 'pos')}
@@ -570,6 +576,7 @@ function reportCard(){
     ${row('Έξοδα', E, 'owe')}
     ${row('παραλαβές & πληρωμές προμηθευτών', SP, '', true)}${row('έξοδα (μισθοί, ΔΕΗ…)', X, '', true)}
     ${row('<b>Διαφορά</b>', D, D >= 0 ? 'pos' : 'owe')}
+    ${profit}
     <h2 class="muted" style="font-size:15px;margin:12px 0 4px">Ανά πηγή</h2>
     ${row('Ταμειακή − πληρωμές από ταμείο', C - out('cash'), C - out('cash') >= 0 ? 'pos' : 'owe')}
     ${row('POS − πληρωμές από τράπεζα', P - out('bank'), P - out('bank') >= 0 ? 'pos' : 'owe')}
@@ -580,11 +587,21 @@ function reportCard(){
 }
 
 /* ---------- Προϊόντα (όνομα, τιμή, ετικέτες) ---------- */
+const costOf = p => { if(p.cost != null) return p.cost; const k = pk(p.name), c = k ? S.sprices.filter(x => x.price != null && pk(x.name) === k).map(x => x.price) : []; return c.length ? Math.min(...c) : null; };
+const pf = n => n == null ? '—' : n.toLocaleString('el-GR', {maximumFractionDigits:1}) + '%';
+const profitLine = (price, cost) => {
+  if(price == null || cost == null) return '';
+  const pr = price - cost;
+  return `κέρδος <b class="${pr >= 0 ? 'pos' : 'owe'}">${eur(pr)}</b> · ${price ? pf(pr / price * 100) : '—'} περιθώριο · ${cost ? pf(pr / cost * 100) : '—'} επί κόστους`;
+};
+const costLine = p => { const c = costOf(p), pl = profitLine(p.price, c); return pl ? `<div class="by" style="margin-top:4px">αγορά ${eur(c)}${p.cost == null ? ' (από προμηθευτή)' : ''} · ${pl}</div>` : ''; };
+const supProfit = x => { const k = pk(x.name), mp = k && S.products.find(p => p.price != null && pk(p.name) === k), pl = mp ? profitLine(mp.price, x.price) : ''; return pl ? `<div class="by">πώληση ${eur(mp.price)} · ${pl}</div>` : ''; };
 function prodList(){
   const l = S.products.filter(p => (!ptag || tagsOf(p).some(t => norm(t) === ptag)) && match(p.name + ' ' + (p.tags || ''))).sort((a, b) => a.name.localeCompare(b.name, 'el'));
   if(!l.length) return empty('Κανένα προϊόν.');
   return l.map(p => `<div class="item"><div class="row"><div class="t">${esc(p.name)}${tag(p)}</div>
     <div class="row"><b class="price">${p.price != null ? eur(p.price) : '—'}</b>${editBtn('prodEdit', p)}${delBtn('prodDel', p)}</div></div>
+    ${costLine(p)}
     ${tagsOf(p).length ? `<div class="ptags">${tagsOf(p).map(t => `<button class="chip tg ${ptag === norm(t) ? 'on' : ''}" data-act="ptag" data-id="${esc(norm(t))}">${esc(t)}</button>`).join('')}</div>` : ''}</div>`).join('');
 }
 function vProd(){
@@ -619,8 +636,8 @@ async function editItem(kind, id){
     if(!v) return; x.name = v.name; x.phone = v.phone; x.note = v.note;
   }
   if(kind === 'prod'){
-    v = await formModal('Επεξεργασία προϊόντος', [{name:'name', label:'Όνομα προϊόντος', required:1}, {name:'price', label:'Τιμή €', inputmode:'decimal'}, {name:'tags', label:'Ετικέτες (διάλεξε ή γράψε, με κόμμα)', chips:1}], {name:x.name, price:x.price == null ? '' : x.price, tags:x.tags || ''});
-    if(!v) return; const op = x.price, np = num(v.price); x.name = v.name; x.price = np; x.tags = normTags(v.tags);
+    v = await formModal('Επεξεργασία προϊόντος', [{name:'name', label:'Όνομα προϊόντος', required:1}, {name:'price', label:'Τιμή πώλησης €', inputmode:'decimal'}, {name:'cost', label:'Τιμή αγοράς (χονδρική) €', inputmode:'decimal'}, {name:'tags', label:'Ετικέτες (διάλεξε ή γράψε, με κόμμα)', chips:1}], {name:x.name, price:x.price == null ? '' : x.price, cost:x.cost == null ? '' : x.cost, tags:x.tags || ''});
+    if(!v) return; const op = x.price, np = num(v.price); x.name = v.name; x.price = np; x.cost = num(v.cost); x.tags = normTags(v.tags);
     if(op !== np && !(op == null && np == null)) addNotif('all', `Αλλαγή τιμής: ${x.name} ${op == null ? '—' : eur(op)} → ${np == null ? '—' : eur(np)}`);
   }
   if(kind === 'recv'){
@@ -629,7 +646,7 @@ async function editItem(kind, id){
     if(!v.supplier) return toast('Διάλεξε προμηθευτή'); const t = num(v.total); if(t == null) return toast('Βάλε αξία τιμολογίου'); x.name = v.name; x.supplier = v.supplier; x.total = t; x.date = v.date || x.date; x.amount = a; x.src = v.src === 'bank' ? 'bank' : 'cash';
   }
   if(kind === 'sup'){ v = await formModal('Επεξεργασία προμηθευτή', [{name:'name', label:'Όνομα', required:1}, {name:'phone', label:'Τηλέφωνο', type:'tel', inputmode:'tel'}, {name:'days', label:'Ημέρες παράδοσης (π.χ. Δευ, Πεμ)'}], x); if(!v) return; x.name = v.name; x.phone = v.phone; x.days = v.days; }
-  if(kind === 'sprice'){ v = await formModal('Επεξεργασία τιμής', [{name:'name', label:'Προϊόν', required:1}, {name:'price', label:'Τιμή €', inputmode:'decimal'}], {name:x.name, price:x.price ?? ''}); if(!v) return; x.name = v.name; x.price = num(v.price); }
+  if(kind === 'sprice'){ v = await formModal('Επεξεργασία τιμής', [{name:'name', label:'Προϊόν', required:1}, {name:'price', label:'Τιμή αγοράς (χονδρική) €', inputmode:'decimal'}], {name:x.name, price:x.price ?? ''}); if(!v) return; x.name = v.name; x.price = num(v.price); }
   if(kind === 'z'){
     v = await formModal('Επεξεργασία Ζ', [{name:'date', label:'Ημερομηνία', type:'date', required:1}, {name:'z', label:'Ζ ταμειακής €', inputmode:'decimal', required:1}, {name:'pos', label:'Ζ POS €', inputmode:'decimal'}], {date:x.date, z:x.z, pos:x.pos || ''});
     if(!v) return; const a = num(v.z); if(a == null) return toast('Βάλε το Ζ');
@@ -809,9 +826,9 @@ document.addEventListener('click', async ev => {
     case 'wloc': locOpen(); return;
     case 'tagmore': tagsAll = !tagsAll; render(); return;
     case 'prodNew': {
-      const v = await formModal('Νέο προϊόν', [{name:'name', label:'Όνομα προϊόντος', required:1}, {name:'price', label:'Τιμή €', inputmode:'decimal'}, {name:'tags', label:'Ετικέτες (διάλεξε ή γράψε, με κόμμα)', chips:1}], {}, 'Προσθήκη');
+      const v = await formModal('Νέο προϊόν', [{name:'name', label:'Όνομα προϊόντος', required:1}, {name:'price', label:'Τιμή πώλησης €', inputmode:'decimal'}, {name:'cost', label:'Τιμή αγοράς (χονδρική) €', inputmode:'decimal'}, {name:'tags', label:'Ετικέτες (διάλεξε ή γράψε, με κόμμα)', chips:1}], {}, 'Προσθήκη');
       if(!v) return;
-      S.products.push({id:uid(), name:v.name, price:num(v.price), tags:normTags(v.tags), by:who()});
+      S.products.push({id:uid(), name:v.name, price:num(v.price), cost:num(v.cost), tags:normTags(v.tags), by:who()});
       save(); render(); toast('Αποθηκεύτηκε'); return;
     }
     case 'nview': needsView = id; q = ''; render(); return;
