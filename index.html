@@ -108,7 +108,7 @@ try{ localStorage.removeItem('peripteros-files'); }catch(e){}
 let lastSub = {s:'', t:0}, openSup = null, supView = 'order';
 let session = null, tok = {id:'', exp:0}, users = null;
 const KEY = 'peripteros-v1';
-const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[], settings:[], posts:[], members:[], likes:[], notifs:[]});
+const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[], settings:[], posts:[], members:[], likes:[], notifs:[], ndis:[]});
 function migrate(s){ s.entries = s.entries || []; s.debtors.forEach(c => { if(Array.isArray(c.entries)){ c.entries.forEach(e => s.entries.push({...e, debtor:c.id})); delete c.entries; } });
   (s.expiry || []).forEach(e => s.products.push({id:'x' + e.id, name:e.name, exp:e.date, by:e.by})); s.expiry = []; delete s.cigs; return s; }
 function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStorage.getItem(KEY)) || {})); }catch(e){ return blank(); } }
@@ -170,13 +170,14 @@ function nextDelivery(sp){
   return '';
 }
 function purgeNeeds(){
-  const now = Date.now(), lim = now - 3 * 864e5, n0 = S.needs.length, p0 = S.posts.length, l0 = S.likes.length, f0 = S.notifs.length;
+  const now = Date.now(), lim = now - 3 * 864e5, n0 = S.needs.length, p0 = S.posts.length, l0 = S.likes.length, f0 = S.notifs.length, d0 = S.ndis.length;
   S.needs = S.needs.filter(n => !(n.rcv && n.rcv < lim));
   if(p0 > 200) S.posts = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
   const ids = new Set(S.posts.map(p => p.id));
   S.likes = S.likes.filter(l => ids.has(l.post));
   S.notifs = S.notifs.filter(n => n.at > now - 14 * 864e5);
-  if(S.needs.length === n0 && S.posts.length === p0 && S.likes.length === l0 && S.notifs.length === f0) return false; save(); return true;
+  const nids = new Set(S.notifs.map(n => n.id)); S.ndis = S.ndis.filter(d => nids.has(d.n));
+  if(S.needs.length === n0 && S.posts.length === p0 && S.likes.length === l0 && S.notifs.length === f0 && S.ndis.length === d0) return false; save(); return true;
 }
 const needRow = n => {
   const left = n.rcv ? Math.max(0, Math.ceil((n.rcv + 3 * 864e5 - Date.now()) / 864e5)) : 0;
@@ -391,7 +392,7 @@ const postRow = x => {
 /* ---------- Ειδοποιήσεις ---------- */
 const seen = () => +localStorage.getItem('peripteros-seen') || 0;
 const initSeen = () => { try{ if(localStorage.getItem('peripteros-seen') == null) localStorage.setItem('peripteros-seen', String(Date.now())); }catch(e){} };
-const myNotifs = () => S.notifs.filter(n => n.u !== me() && (n.to === me() || n.to === 'all' || (n.to === 'admin' && isAdmin()))).sort((a, b) => b.at - a.at);
+const myNotifs = () => { const dis = new Set(S.ndis.filter(d => d.u === me()).map(d => d.n)); return S.notifs.filter(n => !dis.has(n.id) && n.u !== me() && (n.to === me() || n.to === 'all' || (n.to === 'admin' && isAdmin()))).sort((a, b) => b.at - a.at); };
 const unread = () => myNotifs().filter(n => n.at > seen()).length;
 const addNotif = (to, text) => S.notifs.push({id:uid(), to, text, u:me(), at:Date.now()});
 let lastUnread = 0;
@@ -403,11 +404,19 @@ function checkNotifs(){
   lastUnread = n; renderHeader();
 }
 function notifOpen(){
-  const prev = seen(), l = myNotifs().slice(0, 30);
+  const prev = seen();
   try{ localStorage.setItem('peripteros-seen', String(Date.now())); }catch(e){}
   lastUnread = 0; renderHeader();
-  const m = mk(`<div class="sheet"><h2>Ειδοποιήσεις</h2>${l.length ? l.map(n => `<div class="item"><div class="t">${esc(n.text)}${n.at > prev ? ' <span class="badge warn">νέο</span>' : ''}</div><div class="by">${dt(n.at)}</div></div>`).join('') : empty('Καμία ειδοποίηση.')}<button class="primary" data-x style="width:100%;margin-top:8px">Κλείσιμο</button></div>`);
-  m.onclick = e => { if(e.target === m || e.target.closest('[data-x]')) m.remove(); };
+  const m = mk(`<div class="sheet"><h2>Ειδοποιήσεις</h2><div id="nl"></div><div class="row" style="margin-top:8px"><button class="danger" data-all>Διαγραφή όλων</button><button class="primary" data-x>Κλείσιμο</button></div></div>`);
+  const draw = () => { const l = myNotifs().slice(0, 50); m.querySelector('#nl').innerHTML = l.length ? l.map(n => `<div class="item row"><div><div class="t">${esc(n.text)}${n.at > prev ? ' <span class="badge warn">νέο</span>' : ''}</div><div class="by">${dt(n.at)}</div></div><button class="danger sm" data-del="${n.id}" aria-label="Διαγραφή">✕</button></div>`).join('') : empty('Καμία ειδοποίηση.'); };
+  const drop = n => { if(n.to === me()) S.notifs = S.notifs.filter(x => x.id !== n.id); else S.ndis.push({id:'d_' + n.id + '_' + me(), n:n.id, u:me()}); };
+  draw();
+  m.onclick = async e => {
+    if(e.target === m || e.target.closest('[data-x]')) return m.remove();
+    const d = e.target.closest('[data-del]');
+    if(d){ const n = S.notifs.find(x => x.id === d.dataset.del); if(n){ drop(n); save(); renderHeader(); draw(); } return; }
+    if(e.target.closest('[data-all]') && myNotifs().length && await ask('Να διαγραφούν όλες οι ειδοποιήσεις σου;', 'Διαγραφή')){ myNotifs().forEach(drop); save(); renderHeader(); draw(); }
+  };
 }
 function vSocial(){
   const l = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
@@ -888,7 +897,7 @@ document.addEventListener('input', ev => {
   if(ev.target.name === 'tags'){ const fm = ev.target.closest('form'); if(fm) syncTags(fm); }
 });
 /* ---------- Λογαριασμοί και συγχρονισμός (Firebase, REST) ---------- */
-const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay','tasks','settings','posts','members','likes','notifs'];
+const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay','tasks','settings','posts','members','likes','notifs','ndis'];
 let remote = null, syncing = false, again = false, needRender = false, es = null, rp = null;
 const clone = o => JSON.parse(JSON.stringify(o));
 const toMap = arr => Object.fromEntries(arr.map(x => [x.id, x]));
