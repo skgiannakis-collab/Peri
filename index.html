@@ -65,7 +65,7 @@ button{font:inherit;cursor:pointer}
 .stock{min-width:118px}
 .stock.out{background:var(--red);color:#fff}
 .stock.in{background:var(--ok);color:#fff}
-#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#2b3b34;color:#eef5f1;border:1px solid var(--line);padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;max-width:90%}
+#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#2b3b34;color:#eef5f1;border:1px solid var(--line);padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;max-width:90%}
 #toast.show{opacity:1}
 a{color:var(--a);font-weight:700}
 .sync{font-size:12px;opacity:.9}
@@ -190,7 +190,7 @@ function toast(m, act){
   const el = $('#toast'); el.innerHTML = esc(m) + (act ? ` <button id="tact">${esc(act.label)}</button>` : '');
   el.style.pointerEvents = act ? 'auto' : 'none'; el.classList.add('show');
   if(act) $('#tact').onclick = () => { act.fn(); el.classList.remove('show'); };
-  clearTimeout(tt); tt = setTimeout(() => el.classList.remove('show'), act ? 6000 : 1800);
+  clearTimeout(tt); tt = setTimeout(() => el.classList.remove('show'), act ? 6000 : 2800);
 }
 const mk = html => { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = html; document.body.appendChild(m); return m; };
 function ask(msg, yes = 'Συνέχεια'){
@@ -243,7 +243,11 @@ function vMenu(){
 }
 
 /* ---------- Ελλείψεις ---------- */
-const inNeeds = n => S.needs.some(x => !x.done && pk(x.text) === pk(n));
+const inNeeds = n => S.needs.some(x => !x.rcv && pk(x.text) === pk(n));
+function ensureSupProducts(text, sups, by){
+  const k = pk(text); if(!k) return;
+  String(sups || '').split(',').filter(Boolean).forEach(id => { if(!S.sprices.some(x => x.supplier === id && pk(x.name) === k)) S.sprices.push({id:uid(), supplier:id, name:text, by}); });
+}
 const pnList = sid => `<datalist id="pn">${[...new Set(S.sprices.filter(x => !sid || x.supplier === sid).map(x => x.name))].map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
 function vNeeds(){
   return `<div class="tools">${[['list', 'Λίστα ελλείψεων'], ['cat', 'Προϊόντα προμηθευτών']].map(([k, l]) => `<button class="chip ${needsView === k ? 'on' : ''}" data-act="nview" data-id="${k}">${l}</button>`).join('')}</div>` + (needsView === 'cat' ? vCat() : vNeeds0());
@@ -256,8 +260,10 @@ function vCat(){
     (l.length ? l.map(o => `<div class="item row"><div><div class="t">${esc(o.name)}</div><div class="by">${o.items.map(x => esc(supName(x.supplier)) + (x.price != null ? ' ' + eur(x.price) : '')).join(' · ')}</div></div><button class="${inNeeds(o.name) ? 'ghost' : 'primary'}" data-act="needAdd" data-id="${o.items[0].id}">${inNeeds(o.name) ? '✓ Λείπει' : '＋ Ελλείψεις'}</button></div>`).join('') : empty(S.sprices.length ? 'Κανένα αποτέλεσμα.' : 'Πρόσθεσε προϊόντα μέσα στους προμηθευτές.'));
 }
 function vNeeds0(){
-  const open = S.needs.filter(n => !n.done), ord = S.needs.filter(n => n.done && !n.rcv), rec = S.needs.filter(n => n.rcv);
+  const hit = n => match(n.text + ' ' + needSups(n).map(supName).join(' '));
+  const open = S.needs.filter(n => !n.done && hit(n)), ord = S.needs.filter(n => n.done && !n.rcv && hit(n)), rec = S.needs.filter(n => n.rcv && hit(n));
   return `<form data-form="need" class="card grid"><input class="full" name="text" list="pn" placeholder="Τι τελειώνει;" required autocomplete="off">${pnList('')}${supChips('')}<button class="primary">Προσθήκη</button></form>
+  <input data-search placeholder="Αναζήτηση στις ελλείψεις…" value="${esc(q)}" style="margin-bottom:10px">
   <div class="tools"><button class="ghost" data-act="needCopy">Αντιγραφή λίστας</button>${rec.length && isAdmin() ? '<button class="ghost" data-act="needClear">Καθάρισμα παραληφθέντων</button>' : ''}</div>
   ${open.length ? open.map(needRow).join('') : empty('Δεν λείπει τίποτα.')}
   ${ord.length ? `<h2 class="muted" style="font-size:15px;margin-top:16px">Παραγγέλθηκαν (αναμένονται)</h2>${ord.map(needRow).join('')}` : ''}
@@ -520,12 +526,12 @@ function vSup(){
     <div class="tools">${[['order', 'Παραγγελία'], ['buys', 'Αγορές'], ['pays', 'Πληρωμές'], ['prices', 'Προϊόντα']].map(([k, l]) => `<button class="chip ${supView === k ? 'on' : ''}" data-act="supv" data-id="${k}">${l}</button>`).join('')}</div>
     ${body}${isAdmin() ? '<button class="danger" data-act="supDel" style="margin-top:12px;width:100%">Διαγραφή προμηθευτή</button>' : ''}`;
   }
-  const l = S.suppliers.filter(x => match(x.name + ' ' + (x.phone || ''))).sort((a, b) => supBal(b.id) - supBal(a.id));
+  const l = S.suppliers.filter(x => match(x.name + ' ' + (x.phone || '') + ' ' + S.sprices.filter(p => p.supplier === x.id).map(p => p.name).join(' '))).sort((a, b) => supBal(b.id) - supBal(a.id));
   const tot = S.suppliers.reduce((t, x) => t + Math.max(supBal(x.id), 0), 0);
   return `<form data-form="sup" class="card grid"><input class="full" name="name" placeholder="Νέος προμηθευτής" required autocomplete="off"><input name="phone" type="tel" inputmode="tel" placeholder="Τηλέφωνο"><input name="days" placeholder="Ημέρες παράδοσης (Δευ, Πεμ)" autocomplete="off"><button class="primary">Προσθήκη</button></form>
   <div class="card row"><span>Σύνολο προς εξόφληση</span><b class="big owe" style="font-size:24px">${eur(tot)}</b></div>
   <input data-search placeholder="Αναζήτηση προμηθευτή…" value="${esc(q)}" style="margin-bottom:10px">
-  ${l.length ? l.map(x => { const b = supBal(x.id), nd = nextDelivery(x), o = S.needs.filter(n => needSups(n).includes(x.id) && !n.done).length; return `<div class="item row" data-act="supOpen" data-id="${x.id}" style="cursor:pointer" tabindex="0"><div><div class="t">${esc(x.name)}</div><div class="by">${nd ? 'επόμενη: ' + nd : ''}${o ? ` · λείπουν ${o}` : ''}</div></div><b class="${b > 0 ? 'owe' : ''}">${eur(b)}</b></div>`; }).join('') : empty('Κανένας προμηθευτής.')}`;
+  ${l.length ? l.map(x => { const b = supBal(x.id), nd = nextDelivery(x), o = S.needs.filter(n => needSups(n).includes(x.id) && !n.done).length, h = q ? S.sprices.filter(p => p.supplier === x.id && fz(p.name, q)).slice(0, 2).map(p => p.name) : []; return `<div class="item row" data-act="supOpen" data-id="${x.id}" style="cursor:pointer" tabindex="0"><div><div class="t">${esc(x.name)}</div><div class="by">${nd ? 'επόμενη: ' + nd : ''}${o ? ` · λείπουν ${o}` : ''}${h.length ? ' · προϊόν: ' + esc(h.join(', ')) : ''}</div></div><b class="${b > 0 ? 'owe' : ''}">${eur(b)}</b></div>`; }).join('') : empty('Κανένας προμηθευτής.')}`;
 }
 
 /* ---------- Λοιπά έξοδα (μόνο διαχειριστής) ---------- */
@@ -617,7 +623,7 @@ async function editItem(kind, id){
   const col = {need:'needs', cash:'cash', debtor:'debtors', entry:'entries', tel:'contacts', prod:'products', recv:'receipts', z:'zs', exp:'expenses', sup:'suppliers', sprice:'sprices'}[kind];
   const x = col && S[col].find(i => i.id === id); if(!x) return;
   let v;
-  if(kind === 'need'){ v = await formModal('Επεξεργασία', [{name:'text', label:'Τι λείπει', required:1}, {name:'sups', label:'Προμηθευτές (ένας ή περισσότεροι)', supchips:1}], {text:x.text, sups:supIds(x).join(',')}); if(!v) return; x.text = v.text; x.sups = v.sups || null; x.supplier = null; }
+  if(kind === 'need'){ v = await formModal('Επεξεργασία', [{name:'text', label:'Τι λείπει', required:1}, {name:'sups', label:'Προμηθευτές (ένας ή περισσότεροι)', supchips:1}], {text:x.text, sups:supIds(x).join(',')}); if(!v) return; x.text = v.text; x.sups = v.sups || null; x.supplier = null; ensureSupProducts(v.text, v.sups, who()); }
   if(kind === 'debtor'){ v = await formModal('Μετονομασία πελάτη', [{name:'name', label:'Όνομα', required:1}], {name:x.name}); if(!v) return; if(S.debtors.some(c => c.id !== x.id && norm(c.name) === norm(v.name))) return toast('Υπάρχει ήδη πελάτης με αυτό το όνομα'); x.name = v.name; }
   if(kind === 'cash'){
     v = await formModal('Επεξεργασία ταμείου', [{name:'amount', label:'Ποσό €', inputmode:'decimal', required:1}, {name:'when', label:'Ημερομηνία/ώρα', type:'datetime-local'}], {amount:x.amount, when:toLocal(x.at)});
@@ -701,10 +707,10 @@ function render(){
 }
 function go(t){ tab = t; q = ''; ptag = ''; openSup = null; editId = null; openDebtor = null; if(t === 'backup' && AUTH && session && isAdmin()) loadUsers(); render(); window.scrollTo(0, 0); $('#nav .on')?.scrollIntoView({inline:'center', block:'nearest'}); }
 function toList(){
+  if(['debt', 'recv', 'exp', 'sup', 'needs'].includes(tab)){ render(); const si = $('[data-search]'); if(si){ si.focus(); si.setSelectionRange(q.length, q.length); } return; }
   const el = $('#list'); if(!el) return;
   if(tab === 'prod') el.innerHTML = prodList();
   if(tab === 'tel') el.innerHTML = telList(S.contacts.filter(c => match(c.name + ' ' + (c.note || ''))).sort((a, b) => a.name.localeCompare(b.name, 'el')));
-  if(['debt', 'recv', 'exp', 'sup', 'needs'].includes(tab)){ render(); const si = $('[data-search]'); if(si){ si.focus(); si.setSelectionRange(q.length, q.length); } }
 }
 
 /* ---------- Φόρμες ---------- */
@@ -718,8 +724,14 @@ document.addEventListener('submit', ev => {
   if(kind === 'login') return doLogin(f);
   if(kind === 'newuser') return createUser(f);
   if(kind === 'need' || kind === 'sneed'){
-    const text = val(f, 'text'); if(S.needs.some(n => !n.done && pk(n.text) === pk(text))) return toast('Υπάρχει ήδη στη λίστα');
+    const text = val(f, 'text'), ex = S.needs.find(n => !n.rcv && pk(n.text) === pk(text));
+    if(ex){
+      const add = kind === 'sneed' ? openSup : val(f, 'sups'), cur = supIds(ex), more = String(add || '').split(',').filter(x => x && !cur.includes(x));
+      if(more.length){ ex.sups = [...cur, ...more].join(','); ex.supplier = null; ensureSupProducts(ex.text, more.join(','), by); save(); render(); return toast(`Υπάρχει ήδη «${ex.text}» — προστέθηκε ο προμηθευτής`); }
+      return toast(ex.done ? `Έχει ήδη παραγγελθεί: «${ex.text}»` : `Υπάρχει ήδη στις ελλείψεις: «${ex.text}»`);
+    }
     S.needs.unshift({id:uid(), text, sups:kind === 'sneed' ? openSup : (val(f, 'sups') || undefined), by, at:now, done:false});
+    ensureSupProducts(text, kind === 'sneed' ? openSup : val(f, 'sups'), by);
     addNotif('admin', `${by || 'Χρήστης'}: προστέθηκε στις ελλείψεις «${text}»`);
   }
   if(kind === 'post'){
@@ -734,8 +746,15 @@ document.addEventListener('submit', ev => {
     S.tasks.push({id:uid(), text, date:f.get('date') || today(), as:as || undefined, done:false, by, at:now});
     if(as && as !== me()) addNotif(as, `${by || 'Κάποιος'} σου ανέθεσε εργασία: «${text}»`);
   }
-  if(kind === 'sup') S.suppliers.push({id:uid(), name:val(f, 'name'), phone:val(f, 'phone'), days:val(f, 'days'), by});
-  if(kind === 'sprice') S.sprices.push({id:uid(), supplier:openSup, name:val(f, 'name'), price:num(f.get('price')), by});
+  if(kind === 'sup'){
+    const nm = val(f, 'name'); if(S.suppliers.some(x => norm(x.name) === norm(nm))) return toast(`Υπάρχει ήδη προμηθευτής «${nm}»`);
+    S.suppliers.push({id:uid(), name:nm, phone:val(f, 'phone'), days:val(f, 'days'), by});
+  }
+  if(kind === 'sprice'){
+    const nm = val(f, 'name'), d = pk(nm) && S.sprices.find(x => x.supplier === openSup && pk(x.name) === pk(nm));
+    if(d) return toast(`Υπάρχει ήδη στον προμηθευτή: «${d.name}»`);
+    S.sprices.push({id:uid(), supplier:openSup, name:nm, price:num(f.get('price')), by});
+  }
   if(kind === 'spay'){
     const a = num(f.get('amount')); if(a == null) return toast('Βάλε ποσό');
     S.spay.push({id:uid(), supplier:openSup, date:f.get('date') || today(), amount:a, src:f.get('src') === 'bank' ? 'bank' : 'cash', by, at:now});
@@ -826,8 +845,12 @@ document.addEventListener('click', async ev => {
     case 'wloc': locOpen(); return;
     case 'tagmore': tagsAll = !tagsAll; render(); return;
     case 'prodNew': {
-      const v = await formModal('Νέο προϊόν', [{name:'name', label:'Όνομα προϊόντος', required:1}, {name:'price', label:'Τιμή πώλησης €', inputmode:'decimal'}, {name:'cost', label:'Τιμή αγοράς (χονδρική) €', inputmode:'decimal'}, {name:'tags', label:'Ετικέτες (διάλεξε ή γράψε, με κόμμα)', chips:1}], {}, 'Προσθήκη');
+      let v, vals = {};
+      for(;;){
+      v = await formModal('Νέο προϊόν', [{name:'name', label:'Όνομα προϊόντος', required:1}, {name:'price', label:'Τιμή πώλησης €', inputmode:'decimal'}, {name:'cost', label:'Τιμή αγοράς (χονδρική) €', inputmode:'decimal'}, {name:'tags', label:'Ετικέτες (διάλεξε ή γράψε, με κόμμα)', chips:1}], vals, 'Προσθήκη');
       if(!v) return;
+      const dup = S.products.find(p => pk(p.name) === pk(v.name)); if(!dup) break; toast(`Υπάρχει ήδη προϊόν «${dup.name}»`); vals = v;
+      }
       S.products.push({id:uid(), name:v.name, price:num(v.price), cost:num(v.cost), tags:normTags(v.tags), by:who()});
       save(); render(); toast('Αποθηκεύτηκε'); return;
     }
