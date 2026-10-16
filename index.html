@@ -120,6 +120,7 @@ button:active{transform:scale(.97)}
 .badge.bad{background:#e0414a;color:#fff}
 .done .t{text-decoration:line-through;color:var(--mut)}
 .empty{text-align:center;color:var(--mut);padding:28px 8px}
+.sal{filter:blur(7px);user-select:none}
 .blur b,.blur .big{filter:blur(7px);user-select:none}
 a{color:var(--a);font-weight:700}
 .av{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:800;border:2.5px solid transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,var(--ig) border-box}
@@ -297,6 +298,9 @@ const TABS = [
 const MENU = [['z','🧮','Ζ ημέρας'], ['exp','🧾','Έξοδα'], ['fin','📊','Οικονομική εικόνα'], ['sup','🏭','Προμηθευτές'], ['tel','📞','Τηλέφωνα'], ['tasks','✅','Εργασίες'], ['updates','🆕','Ενημερώσεις'], ['social','💬','Social'], ['backup','⚙️','Ρυθμίσεις']];
 const cur = () => MENU.some(m => m[0] === tab) ? 'menu' : tab;
 const UPDATES = [
+  {v:'2.0.1', d:'2026-10-16', items:[
+    'Οι μισθοί στα Έξοδα εμφανίζονται θολοί· μόνο ο διαχειριστής τους βλέπει, πατώντας πάνω στο ποσό'
+  ]},
   {v:'2.0', d:'2026-10-16', items:[
     'Νέος σχεδιασμός στυλ Instagram με Liquid Glass, για κινητό, ταμπλέτα και υπολογιστή, με λειτουργία ημέρας και νύχτας',
     'Σήμερα: ώρα, καιρός με πρόγνωση 5 ωρών, εργασίες, εκκρεμείς παραγγελίες, χρέη πελατών και πληρωμές προμηθευτών',
@@ -623,6 +627,13 @@ function vSup(){
 }
 
 /* ---------- Λοιπά έξοδα (μόνο διαχειριστής) ---------- */
+const salRev = new Set();
+const amtHtml = e => {
+  if(e.cat !== 'Μισθοί') return `<b class="price">${eur(e.amount)}</b>`;
+  if(!isAdmin()) return `<b class="price sal">1.234,56 €</b>`;
+  const on = salRev.has(e.id);
+  return `<b class="price ${on ? '' : 'sal'}" data-act="salshow" data-id="${e.id}" style="cursor:pointer" title="Πάτησε για προβολή / απόκρυψη">${eur(e.amount)}</b>`;
+};
 function vExp(){
   const l = S.expenses.filter(e => match(expName(e))).sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.at - a.at);
   return `<form data-form="exp" class="card grid">
@@ -632,9 +643,10 @@ function vExp(){
     <input class="full" name="amount" inputmode="decimal" placeholder="Ποσό €" required autocomplete="off">
     ${srcSelect()}
     <button class="primary">Καταχώρηση εξόδου</button></form>
+  <p class="muted" style="margin:0 0 10px">🔒 Οι μισθοί εμφανίζονται θολοί. Μόνο ο διαχειριστής τους βλέπει, πατώντας πάνω στο ποσό.</p>
   <input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">
   ${l.length ? l.map(e => `<div class="item row"><div><div class="t">${esc(expName(e))}${tag(e)}</div><div class="by">${dd(e.date)} · ${srcLabel(srcOf(e))}</div></div>
-    <div class="row"><b class="price">${eur(e.amount)}</b>${editBtn('expEdit', e)}${delBtn('expDel', e)}</div></div>`).join('') : empty('Κανένα έξοδο ακόμα.')}`;
+    <div class="row">${amtHtml(e)}${e.cat === 'Μισθοί' && !isAdmin() ? '' : editBtn('expEdit', e)}${delBtn('expDel', e)}</div></div>`).join('') : empty('Κανένα έξοδο ακόμα.')}`;
 }
 
 /* ---------- Έσοδα / Έξοδα ---------- */
@@ -674,7 +686,7 @@ function reportCard(){
     <h2 class="muted" style="font-size:15px;margin:12px 0 4px">Ανά πηγή</h2>
     ${row('Ταμειακή − πληρωμές από ταμείο', C - out('cash'), C - out('cash') >= 0 ? 'pos' : 'owe')}
     ${row('POS − πληρωμές από τράπεζα', P - out('bank'), P - out('bank') >= 0 ? 'pos' : 'owe')}
-    ${cl.length ? `<h2 class="muted" style="font-size:15px;margin:12px 0 4px">Έξοδα ανά κατηγορία</h2>` + cl.map(([k, v]) => row(esc(k), v)).join('') : ''}
+    ${cl.length ? `<h2 class="muted" style="font-size:15px;margin:12px 0 4px">Έξοδα ανά κατηγορία</h2>` + cl.map(([k, v]) => k === 'Μισθοί' && !isAdmin() ? `<div class="sum"><span>${esc(k)}</span><b class="sal">1.234,56 €</b></div>` : row(esc(k), v)).join('') : ''}
     ${mk2.length > 1 ? `<h2 class="muted" style="font-size:15px;margin:12px 0 4px">Ανά μήνα</h2>` + mk2.map(k => { const m = months[k];
       return `<div class="sum"><span>${new Date(k + '-01T00:00:00').toLocaleDateString('el-GR', {month:'long', year:'numeric'})}</span><span class="by">${eur(m.i)} − ${eur(m.e)} = <b class="${m.i - m.e >= 0 ? 'pos' : 'owe'}">${eur(m.i - m.e)}</b></span></div>`; }).join('') : ''}
     <p class="muted" style="margin:10px 0 0">Έσοδα = Ζ ταμειακής + Ζ POS. Έξοδα = παραλαβές (ποσό που πλήρωσες) + πληρωμές προμηθευτών + καρτέλα Έξοδα.</p></div>`;
@@ -795,7 +807,7 @@ function render(){
   $('#main').innerHTML = (MENU.some(m => m[0] === tab) ? '<button class="ghost" data-tab="menu" style="margin-bottom:10px">← Μενού</button>' : '') + VIEWS[tab]();
   $('#nav').innerHTML = TABS.map(([k, i, l]) => `<button class="${k === cur() ? 'on' : ''}" data-tab="${k}" ${k === cur() ? 'aria-current="page"' : ''}><b>${i}</b>${l}</button>`).join('');
 }
-function go(t){ tab = t; q = ''; ptag = ''; openSup = null; editId = null; openDebtor = null; if(t === 'backup' && AUTH && session && isAdmin()) loadUsers(); render(); window.scrollTo(0, 0); $('#nav .on')?.scrollIntoView({inline:'center', block:'nearest'}); }
+function go(t){ tab = t; q = ''; ptag = ''; openSup = null; salRev.clear(); editId = null; openDebtor = null; if(t === 'backup' && AUTH && session && isAdmin()) loadUsers(); render(); window.scrollTo(0, 0); $('#nav .on')?.scrollIntoView({inline:'center', block:'nearest'}); }
 function toList(){
   if(['debt', 'recv', 'exp', 'sup', 'needs'].includes(tab)){ render(); const si = $('[data-search]'); if(si){ si.focus(); si.setSelectionRange(q.length, q.length); } return; }
   const el = $('#list'); if(!el) return;
@@ -933,6 +945,7 @@ document.addEventListener('click', async ev => {
     case 'needRcv': { const n = S.needs.find(x => x.id === id); n.done = true; n.rcv = Date.now(); addNotif('admin', `${who() || 'Χρήστης'}: παραλήφθηκε «${n.text}»`); break; }
     case 'needUndoRcv': { const n = S.needs.find(x => x.id === id); n.rcv = null; break; }
     case 'wloc': locOpen(); return;
+    case 'salshow': if(salRev.has(id)) salRev.delete(id); else salRev.add(id); render(); return;
     case 'sugr': sugRange = +id; render(); return;
     case 'needAddT': {
       if(inNeeds(id)) return toast('Είναι ήδη στις ελλείψεις');
@@ -1261,7 +1274,7 @@ function gsOpen(){
       add('Προμηθευτές', S.suppliers.filter(x => has(x.name + ' ' + (x.phone || ''))), x => ({t:x.name, s:eur(supBal(x.id)), go:() => jump('sup', {s:x.id})}));
       add('Προϊόντα προμηθευτών', S.sprices.filter(x => has(x.name)), x => ({t:x.name, s:supName(x.supplier) + ' · ' + eur(x.price), go:() => jump('sup', {s:x.supplier, v:'prices'})}));
       add('Παραλαβές', S.receipts.filter(r => has(r.name + ' ' + supName(r.supplier))), r => ({t:r.name || supName(r.supplier) || 'Παραλαβή', s:dd(r.date) + ' · ' + eur(r.amount), go:() => r.supplier ? jump('sup', {s:r.supplier, v:'buys'}) : jump('recv', {q:r.name})}));
-      add('Έξοδα', S.expenses.filter(e => has(expName(e))), e => ({t:expName(e), s:dd(e.date) + ' · ' + eur(e.amount), go:() => jump('exp', {q:expName(e)})}));
+      add('Έξοδα', S.expenses.filter(e => has(expName(e))), e => ({t:expName(e), s:e.cat === 'Μισθοί' ? dd(e.date) : dd(e.date) + ' · ' + eur(e.amount), go:() => jump('exp', {q:expName(e)})}));
       add('Ελλείψεις', S.needs.filter(n => has(n.text)), n => ({t:n.text, s:n.rcv ? 'παραλήφθηκε' : n.done ? 'παραγγέλθηκε' : 'λείπει', go:() => jump('needs')}));
       add('Τηλέφωνα', S.contacts.filter(c => has(c.name + ' ' + (c.phone || '') + ' ' + (c.note || ''))), c => ({t:c.name, s:c.phone || '', go:() => jump('tel', {q:c.name})}));
     }
