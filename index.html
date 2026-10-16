@@ -311,7 +311,8 @@ const UPDATES = [
     'Το κουμπί Έξοδος μεταφέρθηκε στο Μενού',
     'Οι μισθοί στα Έξοδα εμφανίζονται θολοί· μόνο ο διαχειριστής τους βλέπει, πατώντας πάνω στο ποσό',
     'Το ποιος πρόσθεσε ή άλλαξε κάτι φαίνεται μόνο στον διαχειριστή',
-    'Η έκδοση στον τίτλο ακολουθεί αυτή τη λίστα ενημερώσεων'
+    'Η έκδοση στον τίτλο ακολουθεί αυτή τη λίστα ενημερώσεων',
+    'Στις παραλαβές το «πλήρωσα τώρα» δεν είναι υποχρεωτικό'
   ]}
 ];
 function vUpdates(){
@@ -577,7 +578,7 @@ function recvForm(sid){
     ${sid ? `<input type="hidden" name="supplier" value="${esc(sid)}">` : supSelect(true)}
     <input class="full" name="date" type="date" value="${today()}" required aria-label="Ημερομηνία">
     <input name="total" inputmode="decimal" placeholder="Αξία τιμολογίου €" required autocomplete="off">
-    <input name="amount" inputmode="decimal" placeholder="Πλήρωσα τώρα €" required autocomplete="off">
+    <input name="amount" inputmode="decimal" placeholder="Πλήρωσα τώρα €" autocomplete="off">
     ${srcSelect()}<button class="primary">Καταχώρηση παραλαβής</button></form>`;
 }
 const recvRow = r => `<div class="item row"><div><div class="t">${esc(r.name || supName(r.supplier) || 'Παραλαβή')}${tag(r)}</div><div class="by">${r.supplier ? esc(supName(r.supplier)) + ' · ' : ''}${srcLabel(srcOf(r))}${r.total != null && r.total !== r.amount ? ' · αξία ' + eur(r.total) : ''}</div></div>
@@ -748,8 +749,8 @@ async function editItem(kind, id){
     if(op !== np && !(op == null && np == null)) addNotif('all', `Αλλαγή τιμής: ${x.name} ${op == null ? '—' : eur(op)} → ${np == null ? '—' : eur(np)}`);
   }
   if(kind === 'recv'){
-    v = await formModal('Επεξεργασία παραλαβής', [{name:'name', label:'Όνομα παραλαβής / αρ. τιμολογίου'}, {name:'supplier', label:'Προμηθευτής', options:supOpts()}, {name:'date', label:'Ημερομηνία', type:'date', required:1}, {name:'total', label:'Αξία τιμολογίου €', inputmode:'decimal', required:1}, {name:'amount', label:'Ποσό που πλήρωσα €', inputmode:'decimal', required:1}, {name:'src', label:'Πληρώθηκε από', options:srcOpts}], {name:x.name, supplier:x.supplier || '', date:x.date, total:x.total ?? x.amount, amount:x.amount, src:srcOf(x)});
-    if(!v) return; const a = num(v.amount); if(a == null) return toast('Βάλε ποσό');
+    v = await formModal('Επεξεργασία παραλαβής', [{name:'name', label:'Όνομα παραλαβής / αρ. τιμολογίου'}, {name:'supplier', label:'Προμηθευτής', options:supOpts()}, {name:'date', label:'Ημερομηνία', type:'date', required:1}, {name:'total', label:'Αξία τιμολογίου €', inputmode:'decimal', required:1}, {name:'amount', label:'Ποσό που πλήρωσα €', inputmode:'decimal'}, {name:'src', label:'Πληρώθηκε από', options:srcOpts}], {name:x.name, supplier:x.supplier || '', date:x.date, total:x.total ?? x.amount, amount:x.amount, src:srcOf(x)});
+    if(!v) return; const a = num(v.amount) ?? 0;
     if(!v.supplier) return toast('Διάλεξε προμηθευτή'); const t = num(v.total); if(t == null) return toast('Βάλε αξία τιμολογίου'); x.name = v.name; x.supplier = v.supplier; x.total = t; x.date = v.date || x.date; x.amount = a; x.src = v.src === 'bank' ? 'bank' : 'cash';
   }
   if(kind === 'sup'){ v = await formModal('Επεξεργασία προμηθευτή', [{name:'name', label:'Όνομα', required:1}, {name:'phone', label:'Τηλέφωνο', type:'tel', inputmode:'tel'}, {name:'days', label:'Ημέρες παράδοσης (π.χ. Δευ, Πεμ)'}], x); if(!v) return; x.name = v.name; x.phone = v.phone; x.days = v.days; }
@@ -880,9 +881,9 @@ document.addEventListener('submit', ev => {
   if(kind === 'prod') S.products.push({id:uid(), name:val(f, 'name'), price:num(f.get('price')), tags:normTags(f.get('tags')), by});
   if(kind === 'recv'){
     const a = num(f.get('amount')), tot = num(f.get('total'));
-    if(!val(f, 'supplier')) return toast('Διάλεξε προμηθευτή'); if(tot == null) return toast('Βάλε αξία τιμολογίου'); if(a == null) return toast('Βάλε ποσό που πλήρωσες');
-    S.receipts.push({id:uid(), name:val(f, 'name'), supplier:val(f, 'supplier'), total:tot, date:f.get('date') || today(), amount:a, src:f.get('src') === 'bank' ? 'bank' : 'cash', by, at:now});
-    addNotif('admin', `${by || 'Χρήστης'}: νέα παραλαβή ${eur(a)}${supName(val(f, 'supplier')) ? ' (' + supName(val(f, 'supplier')) + ')' : ''}`);
+    if(!val(f, 'supplier')) return toast('Διάλεξε προμηθευτή'); if(tot == null) return toast('Βάλε αξία τιμολογίου'); 
+    S.receipts.push({id:uid(), name:val(f, 'name'), supplier:val(f, 'supplier'), total:tot, date:f.get('date') || today(), amount:a ?? 0, src:f.get('src') === 'bank' ? 'bank' : 'cash', by, at:now});
+    addNotif('admin', `${by || 'Χρήστης'}: νέα παραλαβή ${eur(a ?? 0)}${supName(val(f, 'supplier')) ? ' (' + supName(val(f, 'supplier')) + ')' : ''}`);
   }
   if(kind === 'z'){
     const a = num(f.get('z')); if(a == null) return toast('Βάλε το Ζ της ταμειακής');
