@@ -311,11 +311,13 @@ function vNeeds(){
 }
 function vCat(){
   const g = {};
-  [...S.sprices, ...S.products.flatMap(p => supIds(p).map(id => ({id:'p' + p.id + id, pid:p.id, supplier:id, name:p.name, price:p.cost})))].forEach(x => { const k = pk(x.name) || x.id; (g[k] = g[k] || {name:x.name, items:[]}).items.push(x); });
-  const l = Object.values(g).filter(o => match(o.name + ' ' + o.items.map(x => supName(x.supplier)).join(' '))).sort((a, b) => a.name.localeCompare(b.name, 'el'));
+  [...S.sprices, ...S.products.flatMap(p => supIds(p).length ? supIds(p).map(id => ({id:'p' + p.id + id, pid:p.id, supplier:id, name:p.name, price:p.cost})) : [{id:'p' + p.id, pid:p.id, supplier:null, name:p.name, price:p.cost}])].forEach(x => { const k = pk(x.name) || x.id; (g[k] = g[k] || {name:x.name, items:[]}).items.push(x); });
+  const sl = o => [...new Map(o.items.filter(x => x.supplier && supName(x.supplier)).map(x => [x.supplier, x])).values()];
+  const l = Object.values(g).filter(o => match(o.name + ' ' + sl(o).map(x => supName(x.supplier)).join(' '))).sort((a, b) => a.name.localeCompare(b.name, 'el'));
   return `<input data-search placeholder="Αναζήτηση προϊόντος…" value="${esc(q)}" style="margin-bottom:10px">` +
-    (l.length ? l.map(o => `<div class="item row"><div><div class="t">${esc(o.name)}</div><div class="by">${o.items.map(x => esc(supName(x.supplier)) + (x.price != null ? ' ' + eur(x.price) : '')).join(' · ')}</div></div><button class="${inNeeds(o.name) ? 'ghost' : 'primary'}" data-act="${o.items[0].pid ? 'needAddP' : 'needAdd'}" data-id="${o.items[0].pid || o.items[0].id}">${inNeeds(o.name) ? '✓ Λείπει' : '＋ Ελλείψεις'}</button></div>`).join('') : empty(S.sprices.length ? 'Κανένα αποτέλεσμα.' : 'Πρόσθεσε προϊόντα μέσα στους προμηθευτές.'));
+    (l.length ? l.map(o => `<div class="item row"><div><div class="t">${esc(o.name)}</div><div class="by">${sl(o).length ? sl(o).map(x => esc(supName(x.supplier)) + (x.price != null ? ' ' + eur(x.price) : '')).join(' · ') : 'χωρίς προμηθευτή'}</div></div><button class="${inNeeds(o.name) ? 'ghost' : 'primary'}" data-act="${o.items[0].pid ? 'needAddP' : 'needAdd'}" data-id="${o.items[0].pid || o.items[0].id}">${inNeeds(o.name) ? '✓ Λείπει' : '＋ Ελλείψεις'}</button></div>`).join('') : empty(S.sprices.length || S.products.length ? 'Κανένα αποτέλεσμα.' : 'Δεν υπάρχουν προϊόντα ακόμα.'));
 }
+
 function vNeeds0(){
   const hit = n => match(n.text + ' ' + needSups(n).map(supName).join(' '));
   const open = S.needs.filter(n => !n.done && hit(n)), ord = S.needs.filter(n => n.done && !n.rcv && hit(n)), rec = S.needs.filter(n => n.rcv && hit(n));
