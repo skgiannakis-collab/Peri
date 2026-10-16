@@ -145,7 +145,7 @@ a{color:var(--a);font-weight:700}
 </head>
 <body>
 <header>
-  <div><div class="brand">Περίπτερο Λίμνη <small style="font-size:11px;font-weight:400;opacity:.85">Beta 2.0</small></div><div id="sync" class="sync"></div></div>
+  <div><div class="brand">Περίπτερο Λίμνη <small id="ver" style="font-size:11px;font-weight:400;opacity:.85">Beta 2.0</small></div><div id="sync" class="sync"></div></div>
   <div id="hdr" class="who"></div>
 </header>
 <main id="main"></main>
@@ -185,7 +185,7 @@ const who = () => AUTH ? (session ? session.name : '') : S.user.trim();
 const isAdmin = () => !AUTH || (!!session && session.role === 'admin');
 const canDel = x => isAdmin() || (!!x && !!x.by && x.by === who());
 const delBtn = (act, x) => canDel(x) ? `<button class="danger sm" data-act="${act}" data-id="${x.id}" aria-label="Διαγραφή">✕</button>` : '';
-const tag = x => (x.by ? ` <span class="by">– ${esc(x.by)}</span>` : '') + (x.ed && x.ed !== x.by ? ` <span class="by">(επεξ. ${esc(x.ed)})</span>` : '');
+const tag = x => !isAdmin() ? '' : (x.by ? ` <span class="by">– ${esc(x.by)}</span>` : '') + (x.ed && x.ed !== x.by ? ` <span class="by">(επεξ. ${esc(x.ed)})</span>` : '');
 const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const GR = {α:'a', β:'b', γ:'g', δ:'d', ε:'e', ζ:'z', η:'i', θ:'t', ι:'i', κ:'k', λ:'l', μ:'m', ν:'n', ξ:'x', ο:'o', π:'p', ρ:'r', σ:'s', ς:'s', τ:'t', υ:'i', φ:'f', χ:'x', ψ:'ps', ω:'o'};
 function pk(s){
@@ -298,9 +298,6 @@ const TABS = [
 const MENU = [['z','🧮','Ζ ημέρας'], ['exp','🧾','Έξοδα'], ['fin','📊','Οικονομική εικόνα'], ['sup','🏭','Προμηθευτές'], ['tel','📞','Τηλέφωνα'], ['tasks','✅','Εργασίες'], ['updates','🆕','Ενημερώσεις'], ['social','💬','Social'], ['backup','⚙️','Ρυθμίσεις']];
 const cur = () => MENU.some(m => m[0] === tab) ? 'menu' : tab;
 const UPDATES = [
-  {v:'2.0.1', d:'2026-10-16', items:[
-    'Οι μισθοί στα Έξοδα εμφανίζονται θολοί· μόνο ο διαχειριστής τους βλέπει, πατώντας πάνω στο ποσό'
-  ]},
   {v:'2.0', d:'2026-10-16', items:[
     'Νέος σχεδιασμός στυλ Instagram με Liquid Glass, για κινητό, ταμπλέτα και υπολογιστή, με λειτουργία ημέρας και νύχτας',
     'Σήμερα: ώρα, καιρός με πρόγνωση 5 ωρών, εργασίες, εκκρεμείς παραγγελίες, χρέη πελατών και πληρωμές προμηθευτών',
@@ -311,7 +308,10 @@ const UPDATES = [
     'Προϊόντα: ετικέτες, τιμή αγοράς και υπολογισμός κέρδους, κουμπί 🛒 για άμεση προσθήκη στις ελλείψεις',
     'Ζ ημέρας, Έξοδα και Οικονομική εικόνα στο Μενού',
     'Αναζήτηση που καταλαβαίνει Ελληνικά και Αγγλικά, και λειτουργία χωρίς internet',
-    'Το κουμπί Έξοδος μεταφέρθηκε στο Μενού'
+    'Το κουμπί Έξοδος μεταφέρθηκε στο Μενού',
+    'Οι μισθοί στα Έξοδα εμφανίζονται θολοί· μόνο ο διαχειριστής τους βλέπει, πατώντας πάνω στο ποσό',
+    'Το ποιος πρόσθεσε ή άλλαξε κάτι φαίνεται μόνο στον διαχειριστή',
+    'Η έκδοση στον τίτλο ακολουθεί αυτή τη λίστα ενημερώσεων'
   ]}
 ];
 function vUpdates(){
@@ -1244,6 +1244,7 @@ function stream(){
   es.addEventListener('auth_revoked', () => { tok.exp = 0; sync(); });
 }
 function boot(){
+  const vr = $('#ver'); if(vr) vr.textContent = 'Beta ' + UPDATES[0].v;
   if(AUTH){ try{ session = JSON.parse(localStorage.getItem(SKEY)); }catch(e){} if(!session) S = blank(); }
   if(AUTH && session){ try{ remote = JSON.parse(localStorage.getItem(BKEY)); }catch(e){} }
   { const ids = new Set(S.nlog.map(l => l.id)); S.needs.forEach(n => { if(!ids.has('n_' + n.id)) S.nlog.push({id:'n_' + n.id, k:pk(n.text) || norm(n.text), t:n.text, at:n.at || Date.now()}); }); }
