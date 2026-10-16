@@ -315,7 +315,8 @@ const UPDATES = [
     'Στις παραλαβές το «πλήρωσα τώρα» δεν είναι υποχρεωτικό',
     'Προϊόντα: κουμπί 🙈 για απόκρυψη προϊόντων που δεν φέρνουμε συνέχεια, και υποκατηγορία Τσιγάρα',
     'Μενού → Όλα τα προϊόντα: όλα τα προϊόντα από τα Προϊόντα, τους Προμηθευτές και τις Ελλείψεις, με κουμπί εμφάνισης στα Προϊόντα',
-    'Μετά από ανανέωση η εφαρμογή ανοίγει στη σελίδα που βρισκόσουν'
+    'Μετά από ανανέωση η εφαρμογή ανοίγει στη σελίδα που βρισκόσουν',
+    'Προϊόντα προμηθευτών: επιλογή κατηγορίας (Προϊόντα ή Τσιγάρα) και ✎ στο «Όλα τα προϊόντα» για να ρυθμίζεις πού εμφανίζεται κάθε προϊόν'
   ]}
 ];
 function vUpdates(){
@@ -611,8 +612,8 @@ function vSup(){
     if(supView === 'prices'){
       const pl = S.sprices.filter(x => x.supplier === id && match(x.name)).sort((a, b) => a.name.localeCompare(b.name, 'el'));
       const lp = S.products.filter(p => supIds(p).includes(id) && match(p.name) && !S.sprices.some(x => x.supplier === id && pk(x.name) === pk(p.name))).sort((a, b) => a.name.localeCompare(b.name, 'el'));
-      body = `<form data-form="sprice" class="card grid"><input class="full" name="name" placeholder="Προϊόν που φέρνει" required autocomplete="off"><input class="full" name="price" inputmode="decimal" placeholder="Τιμή αγοράς (χονδρική) € (προαιρετικά)" autocomplete="off"><button class="primary">Προσθήκη προϊόντος</button></form><input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">` +
-        (pl.length || lp.length ? pl.map(x => `<div class="item row"><div><div class="t">${esc(x.name)}${tag(x)}</div>${supProfit(x)}<button class="chip" data-act="needAdd" data-id="${x.id}" style="margin-top:6px">${inNeeds(x.name) ? '✓ Στις ελλείψεις' : '＋ Ελλείψεις'}</button></div><div class="row"><b class="price">${x.price != null ? eur(x.price) : '—'}</b>${editBtn('spriceEdit', x)}${delBtn('spriceDel', x)}</div></div>`).join('') + lp.map(supProdRow).join('') : empty('Κανένα προϊόν.'));
+      body = `<form data-form="sprice" class="card grid"><input class="full" name="name" placeholder="Προϊόν που φέρνει" required autocomplete="off"><input class="full" name="price" inputmode="decimal" placeholder="Τιμή αγοράς (χονδρική) € (προαιρετικά)" autocomplete="off"><select class="full" name="cat" aria-label="Κατηγορία"><option value="">Κανονικό προϊόν</option><option value="cig">🚬 Τσιγάρα</option></select><button class="primary">Προσθήκη προϊόντος</button></form><input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">` +
+        (pl.length || lp.length ? pl.map(x => `<div class="item row"><div><div class="t">${esc(x.name)}${x.cat === 'cig' ? ' <span class="badge">🚬</span>' : ''}${tag(x)}</div>${supProfit(x)}<button class="chip" data-act="needAdd" data-id="${x.id}" style="margin-top:6px">${inNeeds(x.name) ? '✓ Στις ελλείψεις' : '＋ Ελλείψεις'}</button></div><div class="row"><b class="price">${x.price != null ? eur(x.price) : '—'}</b>${editBtn('spriceEdit', x)}${delBtn('spriceDel', x)}</div></div>`).join('') + lp.map(supProdRow).join('') : empty('Κανένα προϊόν.'));
     }
     return `<button class="ghost" data-act="supBack" style="margin-bottom:10px">← Προμηθευτές</button>
     <div class="card"><div class="row"><h2>${esc(sp.name)}</h2>${editBtn('supEdit', sp)}</div>
@@ -727,10 +728,14 @@ function vProd(){
   <div id="list">${prodList()}</div>`;
 }
 /* ---------- Όλα τα προϊόντα (από παντού) ---------- */
+function prodFromSources(name, cat){
+  const k = pk(name) || norm(name), sp = S.sprices.filter(x => (pk(x.name) || norm(x.name)) === k), cs = sp.map(x => x.price).filter(x => x != null), sups = [...new Set(sp.map(x => x.supplier))].join(',');
+  return {id:uid(), name, cat:cat || (sp.find(x => x.cat) || {}).cat || undefined, cost:cs.length ? Math.min(...cs) : undefined, sups:sups || undefined, by:who()};
+}
 function vAllp(){
-  const g = {}, slot = n => { const k = pk(n) || norm(n); return g[k] = g[k] || {name:n, prod:null, sup:new Set(), need:false}; };
+  const g = {}, slot = n => { const k = pk(n) || norm(n); return g[k] = g[k] || {name:n, prod:null, sup:new Set(), need:false, cat:null}; };
   S.products.forEach(p => { const o = slot(p.name); o.prod = p; supIds(p).forEach(id => o.sup.add(id)); });
-  S.sprices.forEach(x => slot(x.name).sup.add(x.supplier));
+  S.sprices.forEach(x => { const o = slot(x.name); o.sup.add(x.supplier); if(x.cat) o.cat = x.cat; });
   S.needs.forEach(n => { slot(n.text).need = true; });
   S.nlog.forEach(l => { slot(l.t).need = true; });
   let l = Object.values(g).filter(o => match(o.name + ' ' + [...o.sup].map(supName).join(' ')));
@@ -740,8 +745,8 @@ function vAllp(){
   <div class="tools">${[['all', 'Όλα'], ['hid', 'Κρυμμένα'], ['new', 'Όχι στα Προϊόντα']].map(([k, t]) => `<button class="chip ${allpF === k ? 'on' : ''}" data-act="allpf" data-id="${k}">${t}</button>`).join('')}</div>
   <input data-search placeholder="Αναζήτηση…" value="${esc(q)}" style="margin-bottom:10px">` +
   (l.length ? l.map(o => { const p = o.prod, sn = [...o.sup].map(supName).filter(Boolean);
-    const st = p ? (p.hid ? 'κρυφό' : p.cat === 'cig' ? 'Τσιγάρα' : 'στα Προϊόντα') : 'όχι στα Προϊόντα';
-    return `<div class="item row"><div><div class="t">${esc(o.name)}</div><div class="by">${st}${sn.length ? ' · ' + esc(sn.join(', ')) : ''}${o.need ? ' · στις ελλείψεις' : ''}</div></div>${p ? (p.hid ? `<button class="primary" data-act="prodShow" data-id="${p.id}">Εμφάνιση</button>` : `<button class="ghost" data-act="prodHide" data-id="${p.id}">🙈 Απόκρυψη</button>`) : `<button class="primary" data-act="allpAdd" data-id="${esc(o.name)}">＋ Στα Προϊόντα</button>`}</div>`; }).join('') : empty('Κανένα αποτέλεσμα.'));
+    const cg = p ? p.cat : o.cat, st = p ? (p.hid ? 'κρυφό' : 'στα Προϊόντα') + (cg === 'cig' ? ' · 🚬 Τσιγάρα' : '') : 'όχι στα Προϊόντα' + (cg === 'cig' ? ' · 🚬 Τσιγάρα' : '');
+    return `<div class="item row"><div><div class="t">${esc(o.name)}</div><div class="by">${st}${sn.length ? ' · ' + esc(sn.join(', ')) : ''}${o.need ? ' · στις ελλείψεις' : ''}</div></div><div class="row" style="gap:6px">${p ? (p.hid ? `<button class="primary" data-act="prodShow" data-id="${p.id}">Εμφάνιση</button>` : `<button class="ghost" data-act="prodHide" data-id="${p.id}">🙈</button>`) : `<button class="primary" data-act="allpAdd" data-id="${esc(o.name)}">＋ Στα Προϊόντα</button>`}<button class="chip sm" data-act="allpCfg" data-id="${esc(o.name)}" aria-label="Ρύθμιση">✎</button></div></div>`; }).join('') : empty('Κανένα αποτέλεσμα.'));
 }
 
 async function editItem(kind, id){
@@ -777,7 +782,7 @@ async function editItem(kind, id){
     if(!v.supplier) return toast('Διάλεξε προμηθευτή'); const t = num(v.total); if(t == null) return toast('Βάλε αξία τιμολογίου'); x.name = v.name; x.supplier = v.supplier; x.total = t; x.date = v.date || x.date; x.amount = a; x.src = v.src === 'bank' ? 'bank' : 'cash';
   }
   if(kind === 'sup'){ v = await formModal('Επεξεργασία προμηθευτή', [{name:'name', label:'Όνομα', required:1}, {name:'phone', label:'Τηλέφωνο', type:'tel', inputmode:'tel'}, {name:'days', label:'Ημέρες παράδοσης (π.χ. Δευ, Πεμ)'}], x); if(!v) return; x.name = v.name; x.phone = v.phone; x.days = v.days; }
-  if(kind === 'sprice'){ v = await formModal('Επεξεργασία τιμής', [{name:'name', label:'Προϊόν', required:1}, {name:'price', label:'Τιμή αγοράς (χονδρική) €', inputmode:'decimal'}], {name:x.name, price:x.price ?? ''}); if(!v) return; x.name = v.name; x.price = num(v.price); }
+  if(kind === 'sprice'){ v = await formModal('Επεξεργασία τιμής', [{name:'name', label:'Προϊόν', required:1}, {name:'price', label:'Τιμή αγοράς (χονδρική) €', inputmode:'decimal'}, {name:'cat', label:'Κατηγορία (πού θα εμφανίζεται στα Προϊόντα)', options:[['', 'Κανονικό προϊόν'], ['cig', '🚬 Τσιγάρα']]}], {name:x.name, price:x.price ?? '', cat:x.cat || ''}); if(!v) return; x.name = v.name; x.price = num(v.price); x.cat = v.cat || null; }
   if(kind === 'z'){
     v = await formModal('Επεξεργασία Ζ', [{name:'date', label:'Ημερομηνία', type:'date', required:1}, {name:'z', label:'Ζ ταμειακής €', inputmode:'decimal', required:1}, {name:'pos', label:'Ζ POS €', inputmode:'decimal'}], {date:x.date, z:x.z, pos:x.pos || ''});
     if(!v) return; const a = num(v.z); if(a == null) return toast('Βάλε το Ζ');
@@ -880,7 +885,7 @@ document.addEventListener('submit', ev => {
   if(kind === 'sprice'){
     const nm = val(f, 'name'), d = pk(nm) && S.sprices.find(x => x.supplier === openSup && pk(x.name) === pk(nm));
     if(d) return toast(`Υπάρχει ήδη στον προμηθευτή: «${d.name}»`);
-    S.sprices.push({id:uid(), supplier:openSup, name:nm, price:num(f.get('price')), by});
+    S.sprices.push({id:uid(), supplier:openSup, name:nm, price:num(f.get('price')), cat:val(f, 'cat') || undefined, by});
   }
   if(kind === 'spay'){
     const a = num(f.get('amount')); if(a == null) return toast('Βάλε ποσό');
@@ -1003,9 +1008,15 @@ document.addEventListener('click', async ev => {
     case 'allpf': allpF = id; render(); return;
     case 'prodHide': { const p = S.products.find(i => i.id === id); if(!p) return; p.hid = true; save(); render(); toast('Κρύφτηκε από τα Προϊόντα', {label:'Αναίρεση', fn:() => { p.hid = null; save(); render(); }}); return; }
     case 'prodShow': { const p = S.products.find(i => i.id === id); if(!p) return; p.hid = null; toast('Εμφανίστηκε στα Προϊόντα'); break; }
-    case 'allpAdd': {
-      const k = pk(id) || norm(id), sp = S.sprices.filter(x => (pk(x.name) || norm(x.name)) === k), cs = sp.map(x => x.price).filter(x => x != null), sups = [...new Set(sp.map(x => x.supplier))].join(',');
-      S.products.push({id:uid(), name:id, cost:cs.length ? Math.min(...cs) : undefined, sups:sups || undefined, by:who()}); toast('Προστέθηκε στα Προϊόντα'); break;
+    case 'allpAdd': S.products.push(prodFromSources(id)); toast('Προστέθηκε στα Προϊόντα'); break;
+    case 'allpCfg': {
+      const k = pk(id) || norm(id), same = n => (pk(n) || norm(n)) === k, p = S.products.find(x => same(x.name)), sp = S.sprices.filter(x => same(x.name));
+      const v = await formModal('Προϊόν: ' + id, [{name:'cat', label:'Κατηγορία', options:[['', 'Κανονικό προϊόν'], ['cig', '🚬 Τσιγάρα']]}, {name:'show', label:'Εμφάνιση στα Προϊόντα', options:[['1', 'Ναι'], ['0', 'Όχι (κρυφό)']]}], {cat:(p ? p.cat : (sp.find(x => x.cat) || {}).cat) || '', show:p && !p.hid ? '1' : '0'});
+      if(!v) return;
+      sp.forEach(x => { x.cat = v.cat || null; });
+      if(p){ p.cat = v.cat || null; p.hid = v.show === '1' ? null : true; }
+      else if(v.show === '1') S.products.push(prodFromSources(id, v.cat));
+      toast('Αποθηκεύτηκε'); break;
     }
     case 'tagpick': {
       const fm = b.closest('form'), inp = fm.querySelector('[name=tags]'), cur = tagsOf({tags:inp.value}), k = norm(id);
