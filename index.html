@@ -164,14 +164,14 @@ try{ localStorage.removeItem('peripteros-files'); }catch(e){}
 let lastSub = {s:'', t:0}, openSup = null, supView = 'order';
 let session = null, tok = {id:'', exp:0}, users = null;
 const KEY = 'peripteros-v1';
-const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[], settings:[], posts:[], members:[], likes:[], notifs:[], ndis:[]});
+const blank = () => ({user:'', products:[], expiry:[], needs:[], cash:[], debtors:[], entries:[], contacts:[], receipts:[], zs:[], expenses:[], suppliers:[], sprices:[], spay:[], tasks:[], settings:[], posts:[], members:[], likes:[], notifs:[], ndis:[], nlog:[]});
 function migrate(s){ s.entries = s.entries || []; s.debtors.forEach(c => { if(Array.isArray(c.entries)){ c.entries.forEach(e => s.entries.push({...e, debtor:c.id})); delete c.entries; } });
   (s.expiry || []).forEach(e => s.products.push({id:'x' + e.id, name:e.name, exp:e.date, by:e.by})); s.expiry = []; delete s.cigs; return s; }
 function load(){ try{ return migrate(Object.assign(blank(), JSON.parse(localStorage.getItem(KEY)) || {})); }catch(e){ return blank(); } }
 let S = load();
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Δεν έγινε αποθήκευση!'); } sync(); }
 
-let tab = 'home', hideAmts = (() => { try{ return localStorage.getItem('peripteros-blur') === '1'; }catch(e){ return false; } })(), tagsAll = false, needsView = 'list', openDebtor = null, editId = null, q = '', ptag = '', repPeriod = 'month', cashView = 'count';
+let tab = 'home', hideAmts = (() => { try{ return localStorage.getItem('peripteros-blur') === '1'; }catch(e){ return false; } })(), tagsAll = false, needsView = 'list', sugRange = 28, openDebtor = null, editId = null, q = '', ptag = '', repPeriod = 'month', cashView = 'count';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -227,14 +227,15 @@ function nextDelivery(sp){
   return '';
 }
 function purgeNeeds(){
-  const now = Date.now(), lim = now - 3 * 864e5, n0 = S.needs.length, p0 = S.posts.length, l0 = S.likes.length, f0 = S.notifs.length, d0 = S.ndis.length;
+  const now = Date.now(), lim = now - 3 * 864e5, n0 = S.needs.length, p0 = S.posts.length, l0 = S.likes.length, f0 = S.notifs.length, d0 = S.ndis.length, g0 = S.nlog.length;
   S.needs = S.needs.filter(n => !(n.rcv && n.rcv < lim));
   if(p0 > 200) S.posts = [...S.posts].sort((a, b) => b.at - a.at).slice(0, 200);
   const ids = new Set(S.posts.map(p => p.id));
   S.likes = S.likes.filter(l => ids.has(l.post));
   S.notifs = S.notifs.filter(n => n.at > now - 14 * 864e5);
+  S.nlog = S.nlog.filter(l => l.at > now - 35 * 864e5);
   const nids = new Set(S.notifs.map(n => n.id)); S.ndis = S.ndis.filter(d => nids.has(d.n));
-  if(S.needs.length === n0 && S.posts.length === p0 && S.likes.length === l0 && S.notifs.length === f0 && S.ndis.length === d0) return false; save(); return true;
+  if(S.needs.length === n0 && S.posts.length === p0 && S.likes.length === l0 && S.notifs.length === f0 && S.ndis.length === d0 && S.nlog.length === g0) return false; save(); return true;
 }
 const needRow = n => {
   const left = n.rcv ? Math.max(0, Math.ceil((n.rcv + 3 * 864e5 - Date.now()) / 864e5)) : 0;
@@ -293,13 +294,31 @@ const TABS = [
   ['needs','📝','Ελλείψεις'],
   ['menu','☰','Μενού'],
 ];
-const MENU = [['z','🧮','Ζ ημέρας'], ['exp','🧾','Έξοδα'], ['fin','📊','Οικονομική εικόνα'], ['sup','🏭','Προμηθευτές'], ['tel','📞','Τηλέφωνα'], ['tasks','✅','Εργασίες'], ['social','💬','Social'], ['backup','⚙️','Ρυθμίσεις']];
+const MENU = [['z','🧮','Ζ ημέρας'], ['exp','🧾','Έξοδα'], ['fin','📊','Οικονομική εικόνα'], ['sup','🏭','Προμηθευτές'], ['tel','📞','Τηλέφωνα'], ['tasks','✅','Εργασίες'], ['updates','🆕','Ενημερώσεις'], ['social','💬','Social'], ['backup','⚙️','Ρυθμίσεις']];
 const cur = () => MENU.some(m => m[0] === tab) ? 'menu' : tab;
+const UPDATES = [
+  {v:'2.0', d:'2026-10-16', items:[
+    'Νέος σχεδιασμός στυλ Instagram με Liquid Glass, για κινητό, ταμπλέτα και υπολογιστή, με λειτουργία ημέρας και νύχτας',
+    'Σήμερα: ώρα, καιρός με πρόγνωση 5 ωρών, εργασίες, εκκρεμείς παραγγελίες, χρέη πελατών και πληρωμές προμηθευτών',
+    'Social με αναρτήσεις, tag και like, και ειδοποιήσεις 🔔 που μπορείς να σβήνεις',
+    'Εργασίες με ανάθεση σε χρήστη, συνδεδεμένες με το Σήμερα',
+    'Προμηθευτές με προϊόντα, αγορές, πληρωμές, υπόλοιπο και επόμενη παράδοση',
+    'Ελλείψεις: πολλοί προμηθευτές ανά προϊόν, «Παραλήφθηκε» με αυτόματη διαγραφή μετά από 3 ημέρες, λίστα προϊόντων και προτεινόμενη παραγγελία από το ιστορικό 2–4 εβδομάδων',
+    'Προϊόντα: ετικέτες, τιμή αγοράς και υπολογισμός κέρδους, κουμπί 🛒 για άμεση προσθήκη στις ελλείψεις',
+    'Ζ ημέρας, Έξοδα και Οικονομική εικόνα στο Μενού',
+    'Αναζήτηση που καταλαβαίνει Ελληνικά και Αγγλικά, και λειτουργία χωρίς internet',
+    'Το κουμπί Έξοδος μεταφέρθηκε στο Μενού'
+  ]}
+];
+function vUpdates(){
+  return `<h2 style="margin-bottom:8px">Ενημερώσεις</h2>` + UPDATES.map(u => `<div class="card"><div class="row"><h2>Έκδοση ${esc(u.v)}</h2><span class="badge">${dd(u.d)}</span></div><ul style="margin:8px 0 0;padding-left:20px">${u.items.map(i => `<li style="margin-bottom:6px">${esc(i)}</li>`).join('')}</ul></div>`).join('');
+}
 function vMenu(){
-  return `<h2 style="margin-bottom:10px">Μενού</h2>` + MENU.map(([k, i, l]) => `<button class="item row" data-tab="${k}" style="width:100%;min-height:56px;color:var(--ink);cursor:pointer;text-align:left"><span class="t">${i} ${l}</span><span class="muted">›</span></button>`).join('');
+  return `<h2 style="margin-bottom:10px">Μενού</h2>` + MENU.map(([k, i, l]) => `<button class="item row" data-tab="${k}" style="width:100%;min-height:56px;color:var(--ink);cursor:pointer;text-align:left"><span class="t">${i} ${l}</span><span class="muted">›</span></button>`).join('') + (AUTH && session ? `<button class="danger" data-act="logout" style="width:100%;margin-top:14px">Έξοδος (${esc(session.name)})</button>` : '');
 }
 
 /* ---------- Ελλείψεις ---------- */
+const addNeed = o => { S.needs.unshift(o); S.nlog.push({id:'n_' + o.id, k:pk(o.text) || norm(o.text), t:o.text, at:o.at}); };
 const inNeeds = n => S.needs.some(x => !x.rcv && pk(x.text) === pk(n));
 function ensureSupProducts(text, sups, by){
   const k = pk(text); if(!k) return;
@@ -307,7 +326,16 @@ function ensureSupProducts(text, sups, by){
 }
 const pnList = sid => `<datalist id="pn">${[...new Set(S.sprices.filter(x => !sid || x.supplier === sid).map(x => x.name))].map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
 function vNeeds(){
-  return `<div class="tools">${[['list', 'Λίστα ελλείψεων'], ['cat', 'Προϊόντα προμηθευτών']].map(([k, l]) => `<button class="chip ${needsView === k ? 'on' : ''}" data-act="nview" data-id="${k}">${l}</button>`).join('')}</div>` + (needsView === 'cat' ? vCat() : vNeeds0());
+  return `<div class="tools">${[['list', 'Λίστα ελλείψεων'], ['cat', 'Προϊόντα προμηθευτών'], ['sug', 'Προτεινόμενη παραγγελία']].map(([k, l]) => `<button class="chip ${needsView === k ? 'on' : ''}" data-act="nview" data-id="${k}">${l}</button>`).join('')}</div>` + (needsView === 'cat' ? vCat() : needsView === 'sug' ? vSug() : vNeeds0());
+}
+function vSug(){
+  const now = Date.now(), g = {};
+  S.nlog.filter(l => l.at >= now - sugRange * 864e5).forEach(l => { (g[l.k] = g[l.k] || {t:l.t, ts:[]}).ts.push(l.at); });
+  const rows = Object.values(g).map(o => { const ts = o.ts.sort((a, b) => a - b), n = ts.length, avg = n > 1 ? (ts[n - 1] - ts[0]) / (n - 1) : 0, last = ts[n - 1]; return {t:o.t, n, avg, last, due:avg > 0 && now - last >= avg * .8}; })
+    .filter(r => r.n >= 2 && !inNeeds(r.t)).sort((a, b) => (b.due - a.due) || (b.n - a.n));
+  return `<div class="tools">${[[14, '2 εβδομάδες'], [28, '4 εβδομάδες']].map(([d, l]) => `<button class="chip ${sugRange === d ? 'on' : ''}" data-act="sugr" data-id="${d}">${l}</button>`).join('')}</div>
+  <p class="muted" style="margin:0 0 10px">Προϊόντα που τελείωσαν 2 φορές ή περισσότερες στο διάστημα και δεν είναι τώρα στις ελλείψεις.</p>` +
+  (rows.length ? rows.map(r => `<div class="item row"><div><div class="t">${esc(r.t)}${r.due ? ' <span class="badge warn">ώρα για παραγγελία</span>' : ''}</div><div class="by">τελείωσε ${r.n} φορές · κάθε ~${Math.max(1, Math.round(r.avg / 864e5))} ημ. · τελευταία πριν ${Math.floor((now - r.last) / 864e5)} ημ.</div></div><button class="${r.due ? 'primary' : 'ghost'}" data-act="needAddT" data-id="${esc(r.t)}">＋ Ελλείψεις</button></div>`).join('') : empty('Δεν υπάρχουν ακόμα αρκετά δεδομένα. Η πρόταση εμφανίζεται όταν ένα προϊόν έχει τελειώσει τουλάχιστον 2 φορές.'));
 }
 function vCat(){
   const g = {};
@@ -667,7 +695,7 @@ function prodList(){
   const l = S.products.filter(p => (!ptag || tagsOf(p).some(t => norm(t) === ptag)) && match(p.name + ' ' + (p.tags || ''))).sort((a, b) => a.name.localeCompare(b.name, 'el'));
   if(!l.length) return empty('Κανένα προϊόν.');
   return l.map(p => `<div class="item"><div class="row"><div class="t">${esc(p.name)}${tag(p)}</div>
-    <div class="row"><b class="price">${p.price != null ? eur(p.price) : '—'}</b>${editBtn('prodEdit', p)}${delBtn('prodDel', p)}</div></div>
+    <div class="row"><b class="price">${p.price != null ? eur(p.price) : '—'}</b><button class="chip sm" data-act="needAddP" data-id="${p.id}" aria-label="Προσθήκη στις ελλείψεις">${inNeeds(p.name) ? '✅' : '🛒'}</button>${editBtn('prodEdit', p)}${delBtn('prodDel', p)}</div></div>
     ${costLine(p)}
     ${tagsOf(p).length ? `<div class="ptags">${tagsOf(p).map(t => `<button class="chip tg ${ptag === norm(t) ? 'on' : ''}" data-act="ptag" data-id="${esc(norm(t))}">${esc(t)}</button>`).join('')}</div>` : ''}</div>`).join('');
 }
@@ -758,7 +786,7 @@ function vBackup(){
     <button class="danger" data-act="wipe">Διαγραφή όλων των δεδομένων</button></div>`);
 }
 
-const VIEWS = {tasks:vTasks, social:vSocial, fin:vFin, menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
+const VIEWS = {updates:vUpdates, tasks:vTasks, social:vSocial, fin:vFin, menu:vMenu, z:vZ, home:vHome, needs:vNeeds, recv:vRecv, exp:vExp, sup:vSup, cash:vCash, debt:vDebt, prod:vProd, tel:vTel, backup:vBackup};
 
 function render(){
   document.body.dataset.view = tab;
@@ -792,7 +820,7 @@ document.addEventListener('submit', ev => {
       if(more.length){ ex.sups = [...cur, ...more].join(','); ex.supplier = null; ensureSupProducts(ex.text, more.join(','), by); save(); render(); return toast(`Υπάρχει ήδη «${ex.text}» — προστέθηκε ο προμηθευτής`); }
       return toast(ex.done ? `Έχει ήδη παραγγελθεί: «${ex.text}»` : `Υπάρχει ήδη στις ελλείψεις: «${ex.text}»`);
     }
-    S.needs.unshift({id:uid(), text, sups:kind === 'sneed' ? openSup : (val(f, 'sups') || undefined), by, at:now, done:false});
+    addNeed({id:uid(), text, sups:kind === 'sneed' ? openSup : (val(f, 'sups') || undefined), by, at:now, done:false});
     ensureSupProducts(text, kind === 'sneed' ? openSup : val(f, 'sups'), by);
     addNotif('admin', `${by || 'Χρήστης'}: προστέθηκε στις ελλείψεις «${text}»`);
   }
@@ -905,10 +933,18 @@ document.addEventListener('click', async ev => {
     case 'needRcv': { const n = S.needs.find(x => x.id === id); n.done = true; n.rcv = Date.now(); addNotif('admin', `${who() || 'Χρήστης'}: παραλήφθηκε «${n.text}»`); break; }
     case 'needUndoRcv': { const n = S.needs.find(x => x.id === id); n.rcv = null; break; }
     case 'wloc': locOpen(); return;
+    case 'sugr': sugRange = +id; render(); return;
+    case 'needAddT': {
+      if(inNeeds(id)) return toast('Είναι ήδη στις ελλείψεις');
+      const pr = S.products.find(p => pk(p.name) === pk(id));
+      addNeed({id:uid(), text:id, sups:(pr && pr.sups) || undefined, by:who(), at:Date.now(), done:false});
+      addNotif('admin', `${who() || 'Χρήστης'}: προστέθηκε στις ελλείψεις «${id}»`);
+      save(); render(); toast('Προστέθηκε στις ελλείψεις'); return;
+    }
     case 'needAddP': {
       const p = S.products.find(i => i.id === id); if(!p) return;
       if(inNeeds(p.name)) return toast('Είναι ήδη στις ελλείψεις');
-      S.needs.unshift({id:uid(), text:p.name, sups:openSup || p.sups || undefined, by:who(), at:Date.now(), done:false});
+      addNeed({id:uid(), text:p.name, sups:openSup || p.sups || undefined, by:who(), at:Date.now(), done:false});
       addNotif('admin', `${who() || 'Χρήστης'}: προστέθηκε στις ελλείψεις «${p.name}»`);
       save(); render(); toast('Προστέθηκε στις ελλείψεις'); return;
     }
@@ -933,7 +969,7 @@ document.addEventListener('click', async ev => {
     case 'needAdd': {
       const x = S.sprices.find(i => i.id === id); if(!x) return;
       if(inNeeds(x.name)) return toast('Είναι ήδη στις ελλείψεις');
-      S.needs.unshift({id:uid(), text:x.name, by:who(), at:Date.now(), done:false});
+      addNeed({id:uid(), text:x.name, by:who(), at:Date.now(), done:false});
       addNotif('admin', `${who() || 'Χρήστης'}: προστέθηκε στις ελλείψεις «${x.name}»`);
       save(); render(); toast('Προστέθηκε στις ελλείψεις'); return;
     }
@@ -1007,7 +1043,7 @@ document.addEventListener('input', ev => {
   if(ev.target.name === 'tags'){ const fm = ev.target.closest('form'); if(fm) syncTags(fm); }
 });
 /* ---------- Λογαριασμοί και συγχρονισμός (Firebase, REST) ---------- */
-const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay','tasks','settings','posts','members','likes','notifs','ndis'];
+const COLS = ['products','needs','cash','debtors','entries','contacts','receipts','zs','expenses','suppliers','sprices','spay','tasks','settings','posts','members','likes','notifs','ndis','nlog'];
 let remote = null, syncing = false, again = false, needRender = false, es = null, rp = null;
 const clone = o => JSON.parse(JSON.stringify(o));
 const toMap = arr => Object.fromEntries(arr.map(x => [x.id, x]));
@@ -1044,7 +1080,7 @@ function renderHeader(){
     h.innerHTML = '<button data-act="gs" aria-label="Αναζήτηση">🔍</button><label>Βάρδια <input id="who" placeholder="Όνομα" autocomplete="off" aria-label="Όνομα βάρδιας"></label>';
     const i = $('#who'); i.value = S.user; i.addEventListener('input', e => { S.user = e.target.value; save(); });
   } else if(session){
-    h.innerHTML = `<button data-act="gs" aria-label="Αναζήτηση">🔍</button><span>${esc(session.name)}${isAdmin() ? ' (διαχειριστής)' : ''}</span><button data-act="logout">Έξοδος</button>`;
+    h.innerHTML = `<button data-act="gs" aria-label="Αναζήτηση">🔍</button><span>${esc(session.name)}${isAdmin() ? ' (διαχειριστής)' : ''}</span>`;
   } else h.innerHTML = '';
   h.insertAdjacentHTML('beforeend', (AUTH && session ? bellBtn() : '') + themeBtn());
   if(!AUTH) setStatus('off'); else if(!session) setStatus('');
@@ -1197,6 +1233,7 @@ function stream(){
 function boot(){
   if(AUTH){ try{ session = JSON.parse(localStorage.getItem(SKEY)); }catch(e){} if(!session) S = blank(); }
   if(AUTH && session){ try{ remote = JSON.parse(localStorage.getItem(BKEY)); }catch(e){} }
+  { const ids = new Set(S.nlog.map(l => l.id)); S.needs.forEach(n => { if(!ids.has('n_' + n.id)) S.nlog.push({id:'n_' + n.id, k:pk(n.text) || norm(n.text), t:n.text, at:n.at || Date.now()}); }); }
   purgeNeeds(); initSeen();
   render();
   if(AUTH && session){ setStatus('offline'); sync(); }
